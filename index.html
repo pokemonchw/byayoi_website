@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="月之神社是一个以同人创作为主题的 ACG 社区入口，连接作品、近况与同好交流空间。">
     <title>月之神社</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <!-- Noto Serif SC 统一简体中文、繁体中文、日文与拉丁字符的跨平台显示。 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,7 +54,17 @@
                 <div class="hero-actions" aria-label="主要操作">
                     <a class="button primary-button" href="#projects">查看作品入口</a>
                     <a class="button secondary-button" href="#announcements">阅读公告近况</a>
+                    <button
+                        class="button secondary-button"
+                        type="button"
+                        aria-haspopup="dialog"
+                        aria-controls="standeeDialog"
+                        data-open-standee
+                    >
+                        查看完整立绘
+                    </button>
                 </div>
+                <div class="hero-update" id="heroLatestAnnouncement" aria-live="polite"></div>
                 <nav class="hero-quick-links" aria-label="快速入口">
                     <a href="#links">常用入口</a>
                     <span aria-hidden="true">/</span>
@@ -64,13 +75,38 @@
             </div>
 
             <figure class="hero-visual">
-                <div class="hero-standee" tabindex="0" aria-label="看板娘图片，悬停时翻转显示另一张立绘">
-                    <div class="hero-standee-inner">
-                        <img class="standee-face standee-face-front" src="assets/miko-standee-generated.png" alt="手绘风格的月之神社巫女看板立绘">
-                        <img class="standee-face standee-face-back" src="assets/miko-standee.png" alt="月之神社巫女看板娘原始立绘">
-                    </div>
-                </div>
-                <figcaption>看板娘:03</figcaption>
+                <button
+                    class="hero-character-button"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-controls="standeeDialog"
+                    aria-label="查看月之神社看板娘 03 的完整立绘"
+                    data-open-standee
+                >
+                    <span
+                        class="hero-standee"
+                        aria-label="看板娘图片，悬停或聚焦时翻转显示另一张立绘"
+                    >
+                        <span class="hero-standee-inner">
+                            <img
+                                class="standee-face standee-face-front"
+                                src="assets/miko-standee-generated.png"
+                                width="640"
+                                height="640"
+                                alt="手绘风格的月之神社巫女看板立绘"
+                                fetchpriority="high"
+                            >
+                            <img
+                                class="standee-face standee-face-back"
+                                src="assets/miko-standee.png"
+                                width="640"
+                                height="640"
+                                alt="月之神社巫女看板娘原始立绘"
+                            >
+                        </span>
+                    </span>
+                </button>
+                <figcaption>看板娘 03</figcaption>
             </figure>
         </section>
 
@@ -119,6 +155,81 @@
             <div class="join-grid" id="communityChannels" aria-live="polite"></div>
         </section>
     </main>
+
+    <!-- 看板娘立绘浮窗使用原生 dialog，支持 Esc 关闭与键盘焦点管理。 -->
+    <dialog
+        class="standee-dialog"
+        id="standeeDialog"
+        aria-labelledby="standeeDialogTitle"
+        aria-describedby="standeeDialogDescription"
+    >
+        <div class="standee-dialog-shell">
+            <header class="standee-dialog-header">
+                <div>
+                    <p class="eyebrow">月之神社看板娘</p>
+                    <h2 id="standeeDialogTitle">03 · 完整立绘</h2>
+                </div>
+                <button class="standee-dialog-close" type="button" data-close-standee>
+                    <span aria-hidden="true">×</span>
+                    <span class="visually-hidden">关闭完整立绘</span>
+                </button>
+            </header>
+
+            <div class="standee-viewer">
+                <div class="standee-canvas">
+                    <img
+                        id="standeeFullImage"
+                        src="assets/03_1.png"
+                        width="4000"
+                        height="6577"
+                        alt="月之神社看板娘 03 的第一张完整立绘"
+                    >
+                </div>
+
+                <aside class="standee-controls">
+                    <div>
+                        <p class="standee-control-label">选择立绘</p>
+                        <div class="standee-variant-list" role="group" aria-label="完整立绘">
+                            <button
+                                class="standee-variant is-active"
+                                type="button"
+                                aria-pressed="true"
+                                data-standee-src="assets/03_1.png"
+                                data-standee-alt="月之神社看板娘 03 的第一张完整立绘"
+                            >
+                                <img src="assets/03_1.png" alt="" width="4000" height="6577">
+                                <span>立绘 1</span>
+                            </button>
+                            <button
+                                class="standee-variant"
+                                type="button"
+                                aria-pressed="false"
+                                data-standee-src="assets/03_2.png"
+                                data-standee-alt="月之神社看板娘 03 的第二张完整立绘"
+                            >
+                                <img src="assets/03_2.png" alt="" width="4000" height="6577">
+                                <span>立绘 2</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="standee-dialog-description" id="standeeDialogDescription">
+                        完整立绘会自动适应屏幕高度；在小屏设备上可上下滚动查看。按 Esc 也可以关闭。
+                    </p>
+                </aside>
+            </div>
+            <footer class="standee-dialog-credit">
+                <span>画师 ID：</span>
+                <a
+                    href="https://www.mihuashi.com/profiles/2068083?role=painter&amp;utm_source=qq&amp;utm_campaign=userpage&amp;utm_medium=share&amp;utm_content=ordinary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="在米画师查看画师尤西安的饭的主页"
+                >
+                    尤西安的饭
+                </a>
+            </footer>
+        </div>
+    </dialog>
 
     <footer class="site-footer">
         <div>

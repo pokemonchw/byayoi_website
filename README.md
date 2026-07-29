@@ -9,7 +9,19 @@
 - `app.js`：主页内容数据与小型交互逻辑，包含 `siteLinks`、`announcementList`、`featuredProjects` 和 `communityChannels`。
 - `assets/miko-standee.png`：用户提供的首页看板草图透明线稿。
 - `assets/miko-standee-generated.png`：根据草图重绘的首页巫女看板透明线稿。
-- `assets/miko-standee.jpg`、`assets/miko-standee-generated.jpg`：PNG 版本的原始来源图备份。
+- `03_1.png`、`03_2.png`：完整立绘浮窗使用的两张原始图片。
+- `assets/favicon.svg`：沿用首页“月”字标识的浏览器图标。
+
+## 页面结构
+
+主页按访客最常见的访问路径组织：
+
+1. 首屏先说明社区身份，提供作品、公告与完整立绘三个明确操作，并展示最近更新。
+2. 看板娘角色卡保留原有双面图片与悬停翻转；点击卡片或“查看完整立绘”按钮会打开浮窗，可切换两张立绘。
+3. 首屏之后依次提供常用入口、公告近况、作品入口、社区介绍和参与方式。
+4. 重复内容保存在 `app.js` 的具名数据结构中，方便后续独立更新。
+
+立绘浮窗使用原生 `dialog`：支持键盘焦点管理、Esc 关闭、点击遮罩关闭，并在移动端改为纵向布局。
 
 ## 本地预览
 

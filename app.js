@@ -16,6 +16,8 @@
  * @property {string} date
  * @property {string} summary
  * @property {string} targetUrl
+ * @property {string} actionLabel
+ * @property {"link" | "standee"} actionType
  */
 
 /**
@@ -65,12 +67,23 @@ const siteLinks = [
 
 const announcementList = [
     {
+        id: "mascot-standee-update",
+        title: "看板娘立绘更新",
+        date: "2026-07-29",
+        summary: "看板娘 03 的两张完整立绘现已更新。",
+        targetUrl: "#standeeDialog",
+        actionLabel: "查看立绘",
+        actionType: "standee"
+    },
+    {
         id: "homepage-welcome-note",
         title: "新的神社入口摆好了",
         date: "2026-07-13",
         summary: "月之神社重新开张，祝福～",
-        targetUrl: "#top"
-    },
+        targetUrl: "#top",
+        actionLabel: "查看相关位置",
+        actionType: "link"
+    }
 ];
 
 const featuredProjects = [
@@ -132,6 +145,10 @@ const communityChannels = [
 const menuToggle = document.querySelector(".menu-toggle");
 const siteNav = document.querySelector("#siteNav");
 const meteorCatLayer = document.querySelector("#meteorCatLayer");
+const standeeDialog = document.querySelector("#standeeDialog");
+const standeeFullImage = document.querySelector("#standeeFullImage");
+const standeeCloseButton = document.querySelector("[data-close-standee]");
+const standeeVariantButtons = document.querySelectorAll("[data-standee-src]");
 const shouldReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const METEOR_CAT_IMAGE_URL = "assets/meteor-cat.png";
 const METEOR_CAT_MIN_DELAY = 6500;
@@ -140,6 +157,7 @@ const METEOR_CAT_MAX_BATCH = 1;
 const METEOR_CAT_MAX_ON_SCREEN = 2;
 const METEOR_CAT_MIN_ROTATION_DELTA = 16;
 const METEOR_CAT_MAX_ROTATION_DELTA = 42;
+let standeeOpenButton = null;
 
 function formatDateLabel(dateValue) {
     const date = new Date(`${dateValue}T00:00:00+08:00`);
@@ -174,6 +192,24 @@ function renderSiteLinks() {
 function renderAnnouncements() {
     const listElement = document.querySelector("#announcementList");
     listElement.innerHTML = announcementList.map((announcement) => {
+        const actionMarkup = announcement.actionType === "standee"
+            ? `
+                <button
+                    class="text-button announcement-action"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-controls="standeeDialog"
+                    data-open-standee
+                >
+                    ${announcement.actionLabel}
+                </button>
+            `
+            : `
+                <a class="text-link announcement-action" href="${announcement.targetUrl}">
+                    ${announcement.actionLabel}
+                </a>
+            `;
+
         return `
             <article class="announcement-card" id="announcement-${announcement.id}">
                 <time class="announcement-date" datetime="${announcement.date}">${formatDateLabel(announcement.date)}</time>
@@ -181,10 +217,32 @@ function renderAnnouncements() {
                     <h3>${announcement.title}</h3>
                     <p>${announcement.summary}</p>
                 </div>
-                <a class="text-link announcement-action" href="${announcement.targetUrl}">查看相关位置</a>
+                ${actionMarkup}
             </article>
         `;
     }).join("");
+}
+
+function renderLatestAnnouncement() {
+    const latestAnnouncement = announcementList[0];
+    const latestElement = document.querySelector("#heroLatestAnnouncement");
+
+    if (!latestAnnouncement) {
+        latestElement.hidden = true;
+        return;
+    }
+
+    const latestTargetUrl = latestAnnouncement.actionType === "standee"
+        ? "#announcements"
+        : latestAnnouncement.targetUrl;
+
+    latestElement.innerHTML = `
+        <a class="hero-update-link" href="${latestTargetUrl}">
+            <span class="hero-update-label">最近更新</span>
+            <span class="hero-update-title">${latestAnnouncement.title}</span>
+            <time class="hero-update-date" datetime="${latestAnnouncement.date}">${formatDateLabel(latestAnnouncement.date)}</time>
+        </a>
+    `;
 }
 
 function renderFeaturedProjects() {
@@ -317,6 +375,81 @@ function bindNavigation() {
     });
 }
 
+function selectStandeeVariant(selectedButton) {
+    const standeeSrc = selectedButton.getAttribute("data-standee-src");
+    const standeeAlt = selectedButton.getAttribute("data-standee-alt");
+
+    if (!standeeSrc || !standeeAlt) {
+        return;
+    }
+
+    standeeFullImage.src = standeeSrc;
+    standeeFullImage.alt = standeeAlt;
+
+    standeeVariantButtons.forEach((variantButton) => {
+        const isSelected = variantButton === selectedButton;
+        variantButton.classList.toggle("is-active", isSelected);
+        variantButton.setAttribute("aria-pressed", String(isSelected));
+    });
+}
+
+function openStandee(openButton) {
+    if (typeof standeeDialog.showModal !== "function") {
+        window.open(standeeFullImage.src, "_blank", "noopener");
+        return;
+    }
+
+    standeeOpenButton = openButton;
+    document.body.classList.add("is-standee-open");
+    standeeDialog.showModal();
+    standeeCloseButton.focus();
+}
+
+function restoreStandeePageState() {
+    document.body.classList.remove("is-standee-open");
+
+    if (standeeOpenButton instanceof HTMLElement) {
+        standeeOpenButton.focus();
+    }
+}
+
+function closeStandee() {
+    if (standeeDialog.open) {
+        standeeDialog.close();
+    }
+
+    restoreStandeePageState();
+}
+
+function bindStandeeDialog() {
+    document.querySelectorAll("[data-open-standee]").forEach((openButton) => {
+        openButton.addEventListener("click", () => {
+            openStandee(openButton);
+        });
+    });
+
+    standeeCloseButton.addEventListener("click", closeStandee);
+
+    standeeVariantButtons.forEach((variantButton) => {
+        variantButton.addEventListener("click", () => {
+            selectStandeeVariant(variantButton);
+        });
+    });
+
+    standeeDialog.addEventListener("click", (event) => {
+        if (event.target === standeeDialog) {
+            closeStandee();
+        }
+    });
+
+    standeeDialog.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        closeStandee();
+    });
+
+    standeeDialog.addEventListener("close", restoreStandeePageState);
+}
+
 function getRandomNumber(minValue, maxValue) {
     return minValue + Math.random() * (maxValue - minValue);
 }
@@ -387,8 +520,10 @@ function scheduleMeteorCats() {
 
 renderSiteLinks();
 renderAnnouncements();
+renderLatestAnnouncement();
 renderFeaturedProjects();
 renderCommunityChannels();
 bindContactActions();
 bindNavigation();
+bindStandeeDialog();
 scheduleMeteorCats();

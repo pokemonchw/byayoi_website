@@ -89,6 +89,10 @@ body.is-menu-open {
     overflow: hidden;
 }
 
+body.is-standee-open {
+    overflow: hidden;
+}
+
 a {
     color: inherit;
 }
@@ -406,6 +410,51 @@ h3 {
     margin-top: 32px;
 }
 
+.hero-update {
+    min-height: 56px;
+    margin-top: 20px;
+}
+
+.hero-update-link {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    border-block: 1px dashed rgba(110, 72, 65, 0.22);
+    color: var(--color-muted);
+    padding: 10px 2px;
+    text-decoration: none;
+}
+
+.hero-update-link:hover .hero-update-title {
+    color: var(--color-shrine);
+}
+
+.hero-update-label {
+    border-radius: 999px;
+    background: rgba(255, 230, 213, 0.92);
+    color: #a9473f;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.hero-update-title {
+    overflow: hidden;
+    color: var(--color-ink);
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 160ms ease;
+}
+
+.hero-update-date {
+    color: var(--color-dim);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
 .button {
     position: relative;
     overflow: hidden;
@@ -419,6 +468,7 @@ h3 {
     font-weight: 700;
     text-decoration: none;
     box-shadow: 4px 5px 0 rgba(86, 61, 50, 0.08), var(--shadow-panel);
+    cursor: pointer;
     transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
@@ -495,23 +545,49 @@ h3 {
     margin: 0;
 }
 
-/* 看板娘使用双面图片完成悬停翻转，避免动画中途改 DOM 导致闪烁。 */
+/* 角色卡保留原有双面图片与悬停翻转，同时作为完整立绘浮窗的入口。 */
+.hero-character-button {
+    overflow: hidden;
+    display: block;
+    width: 100%;
+    border: 2px solid rgba(110, 72, 65, 0.18);
+    border-radius: 8px;
+    background: var(--color-panel);
+    padding: 0;
+    box-shadow: 6px 8px 0 rgba(86, 61, 50, 0.1), 0 16px 32px rgba(92, 68, 74, 0.12);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.hero-character-button:hover {
+    transform: translateY(-3px);
+    border-color: rgba(189, 75, 66, 0.38);
+    box-shadow: 8px 11px 0 rgba(86, 61, 50, 0.1), 0 20px 38px rgba(92, 68, 74, 0.14);
+}
+
 .hero-standee {
+    position: relative;
+    display: block;
     width: 100%;
     aspect-ratio: 1 / 1;
     perspective: 1200px;
+    background:
+        radial-gradient(circle at 50% 28%, rgba(255, 240, 190, 0.72), transparent 32%),
+        var(--color-panel);
 }
 
 .hero-standee-inner {
     position: relative;
+    display: block;
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
     transition: transform 620ms cubic-bezier(0.2, 0.72, 0.22, 1);
 }
 
-.hero-standee:hover .hero-standee-inner,
-.hero-standee:focus-visible .hero-standee-inner {
+.hero-character-button:hover .hero-standee-inner,
+.hero-character-button:focus-visible .hero-standee-inner {
     transform: rotateY(180deg);
 }
 
@@ -520,10 +596,7 @@ h3 {
     inset: 0;
     width: 100%;
     height: 100%;
-    border: 2px solid rgba(110, 72, 65, 0.18);
-    border-radius: 8px;
     background: #fffaf0;
-    box-shadow: 5px 7px 0 rgba(86, 61, 50, 0.1), 0 16px 32px rgba(92, 68, 74, 0.12);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     object-fit: contain;
@@ -538,6 +611,196 @@ h3 {
     color: var(--color-muted);
     font-size: 14px;
     text-align: center;
+}
+
+/* 浮窗在桌面端完整适配屏幕高度，移动端则允许纵向滚动。 */
+.standee-dialog {
+    width: min(calc(100% - 32px), 980px);
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    border: 2px solid rgba(110, 72, 65, 0.28);
+    border-radius: 10px;
+    background: var(--color-panel);
+    color: var(--color-ink);
+    padding: 0;
+    box-shadow: 10px 14px 0 rgba(57, 35, 36, 0.18), 0 30px 80px rgba(57, 35, 36, 0.28);
+}
+
+.standee-dialog::backdrop {
+    background: rgba(52, 35, 39, 0.68);
+    backdrop-filter: blur(5px);
+}
+
+.standee-dialog[open] {
+    animation: standeeDialogIn 180ms ease-out;
+}
+
+.standee-dialog-shell {
+    background:
+        linear-gradient(106deg, rgba(255, 252, 246, 0.98), rgba(255, 244, 224, 0.94) 58%, rgba(237, 251, 252, 0.86)),
+        repeating-linear-gradient(0deg, rgba(110, 72, 65, 0.035) 0 1px, transparent 1px 10px);
+}
+
+.standee-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px dashed rgba(110, 72, 65, 0.24);
+    padding: 18px 20px;
+}
+
+.standee-dialog-header .eyebrow {
+    margin-bottom: 2px;
+}
+
+.standee-dialog-header h2 {
+    font-size: 25px;
+    text-decoration: none;
+}
+
+.standee-dialog-close {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    background: rgba(255, 250, 240, 0.9);
+    padding: 0 0 3px;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.standee-dialog-close:hover {
+    border-color: rgba(189, 75, 66, 0.42);
+    background: rgba(255, 232, 218, 0.94);
+}
+
+.standee-viewer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 238px;
+    min-height: 0;
+}
+
+.standee-canvas {
+    --standee-canvas-padding: 18px;
+    overflow: hidden;
+    position: relative;
+    display: grid;
+    height: min(720px, calc(100dvh - 190px));
+    min-height: 440px;
+    min-width: 0;
+    place-items: center;
+    border-right: 1px dashed rgba(110, 72, 65, 0.24);
+    padding: var(--standee-canvas-padding);
+}
+
+.standee-canvas img {
+    position: absolute;
+    inset: var(--standee-canvas-padding);
+    width: calc(100% - (var(--standee-canvas-padding) * 2));
+    height: calc(100% - (var(--standee-canvas-padding) * 2));
+    max-width: none;
+    object-fit: contain;
+}
+
+.standee-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 28px;
+    padding: 22px 18px;
+}
+
+.standee-control-label {
+    margin: 0 0 12px;
+    color: var(--color-ink);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.standee-variant-list {
+    display: grid;
+    gap: 10px;
+}
+
+.standee-variant {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    background: rgba(255, 250, 240, 0.76);
+    padding: 7px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.standee-variant:hover,
+.standee-variant.is-active {
+    border-color: rgba(189, 75, 66, 0.42);
+    background: rgba(255, 232, 218, 0.86);
+}
+
+.standee-variant.is-active {
+    box-shadow: inset 3px 0 0 var(--color-shrine);
+}
+
+.standee-variant img {
+    width: 54px;
+    height: 64px;
+    border-radius: 5px;
+    background: #fff;
+    object-fit: cover;
+    object-position: 50% 26%;
+}
+
+.standee-variant span {
+    font-weight: 700;
+}
+
+.standee-dialog-description {
+    margin: 0;
+    color: var(--color-dim);
+    font-size: 13px;
+}
+
+.standee-dialog-credit {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    border-top: 1px dashed rgba(110, 72, 65, 0.24);
+    color: var(--color-muted);
+    padding: 11px 18px 12px;
+    font-size: 14px;
+}
+
+.standee-dialog-credit a {
+    color: #236d94;
+    font-weight: 700;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+}
+
+.standee-dialog-credit a:hover {
+    color: var(--color-shrine);
+}
+
+@keyframes standeeDialogIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.99);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .hero-section::after {
@@ -912,10 +1175,6 @@ h3 {
         justify-self: center;
     }
 
-    .hero-standee {
-        aspect-ratio: 1 / 1;
-    }
-
     .hero-visual figcaption {
         padding: 0;
     }
@@ -953,6 +1212,25 @@ h3 {
     .footer-nav {
         justify-content: flex-start;
     }
+
+    .standee-viewer {
+        grid-template-columns: 1fr;
+    }
+
+    .standee-canvas {
+        height: min(58dvh, 560px);
+        min-height: 360px;
+        border-right: 0;
+        border-bottom: 1px dashed rgba(110, 72, 65, 0.24);
+    }
+
+    .standee-controls {
+        gap: 20px;
+    }
+
+    .standee-variant-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 560px) {
@@ -984,6 +1262,14 @@ h3 {
         font-size: 17px;
     }
 
+    .hero-update-link {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .hero-update-date {
+        display: none;
+    }
+
     .hero-actions,
     .status-strip {
         align-items: stretch;
@@ -1001,6 +1287,39 @@ h3 {
 
     .content-section {
         padding-top: 64px;
+    }
+
+    .standee-dialog {
+        width: calc(100% - 16px);
+        max-height: calc(100dvh - 16px);
+    }
+
+    .standee-dialog-header {
+        padding: 14px;
+    }
+
+    .standee-dialog-header h2 {
+        font-size: 22px;
+    }
+
+    .standee-canvas {
+        --standee-canvas-padding: 10px;
+        height: min(52dvh, 470px);
+        min-height: 300px;
+    }
+
+    .standee-controls {
+        padding: 16px 14px;
+    }
+
+    .standee-variant {
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    .standee-variant img {
+        width: 44px;
+        height: 54px;
     }
 }
 
