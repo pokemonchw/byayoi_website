@@ -70,7 +70,7 @@ const announcementList = [
         id: "mascot-standee-update",
         title: "看板娘立绘更新",
         date: "2026-07-29",
-        summary: "看板娘 03 的两张完整立绘现已更新。",
+        summary: "看板娘 03 的两张立绘现已更新。",
         targetUrl: "#standeeDialog",
         actionLabel: "查看立绘",
         actionType: "standee"

@@ -545,7 +545,7 @@ h3 {
     margin: 0;
 }
 
-/* 角色卡保留原有双面图片与悬停翻转，同时作为完整立绘浮窗的入口。 */
+/* 角色卡保留原有双面图片与悬停翻转，同时作为立绘浮窗的入口。 */
 .hero-character-button {
     overflow: hidden;
     display: block;
