@@ -146,7 +146,10 @@ const menuToggle = document.querySelector(".menu-toggle");
 const siteNav = document.querySelector("#siteNav");
 const meteorCatLayer = document.querySelector("#meteorCatLayer");
 const standeeDialog = document.querySelector("#standeeDialog");
+const standeeCanvas = document.querySelector(".standee-canvas");
+const standeePreviewImage = document.querySelector("#standeePreviewImage");
 const standeeFullImage = document.querySelector("#standeeFullImage");
+const standeeLoadingStatus = document.querySelector("#standeeLoadingStatus");
 const standeeCloseButton = document.querySelector("[data-close-standee]");
 const standeeVariantButtons = document.querySelectorAll("[data-standee-src]");
 const shouldReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -157,7 +160,10 @@ const METEOR_CAT_MAX_BATCH = 1;
 const METEOR_CAT_MAX_ON_SCREEN = 2;
 const METEOR_CAT_MIN_ROTATION_DELTA = 16;
 const METEOR_CAT_MAX_ROTATION_DELTA = 42;
+const standeeObjectUrls = new Map();
 let standeeOpenButton = null;
+let activeStandeeLoad = null;
+let standeeLoadSequence = 0;
 
 function formatDateLabel(dateValue) {
     const date = new Date(`${dateValue}T00:00:00+08:00`);
@@ -375,37 +381,236 @@ function bindNavigation() {
     });
 }
 
-function selectStandeeVariant(selectedButton) {
-    const standeeSrc = selectedButton.getAttribute("data-standee-src");
-    const standeeAlt = selectedButton.getAttribute("data-standee-alt");
+function cancelStandeeLoad() {
+    standeeLoadSequence += 1;
 
-    if (!standeeSrc || !standeeAlt) {
+    if (!activeStandeeLoad) {
         return;
     }
 
-    standeeFullImage.src = standeeSrc;
-    standeeFullImage.alt = standeeAlt;
+    activeStandeeLoad.controller?.abort();
+
+    if (activeStandeeLoad.image) {
+        activeStandeeLoad.image.src = "";
+    }
+
+    activeStandeeLoad = null;
+}
+
+function formatStandeeLoadingStatus(loadedBytes, totalBytes) {
+    if (!totalBytes) {
+        return "正在流式加载高清立绘…";
+    }
+
+    const loadedPercent = Math.min(100, Math.round((loadedBytes / totalBytes) * 100));
+    return `正在流式加载高清立绘… ${loadedPercent}%`;
+}
+
+/**
+ * 分块读取立绘响应，以便显示下载进度并在切换或关闭时取消请求。
+ * @param {string} standeeSrc
+ * @param {AbortSignal} signal
+ * @param {(loadedBytes: number, totalBytes: number) => void} onProgress
+ * @returns {Promise<Blob>}
+ */
+async function fetchStandeeBlob(standeeSrc, signal, onProgress) {
+    const response = await fetch(standeeSrc, {
+        cache: "force-cache",
+        signal
+    });
+
+    if (!response.ok) {
+        throw new Error(`立绘请求失败：${response.status}`);
+    }
+
+    const totalBytes = Number(response.headers.get("Content-Length")) || 0;
+
+    if (!response.body) {
+        const standeeBlob = await response.blob();
+        onProgress(standeeBlob.size, standeeBlob.size);
+        return standeeBlob;
+    }
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let loadedBytes = 0;
+
+    while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+            break;
+        }
+
+        chunks.push(value);
+        loadedBytes += value.byteLength;
+        onProgress(loadedBytes, totalBytes);
+    }
+
+    return new Blob(chunks, {
+        type: response.headers.get("Content-Type") || "image/webp"
+    });
+}
+
+/**
+ * 等待图片解码完成，避免低清预览在高清图尚未可绘制时消失。
+ * @param {string} imageSrc
+ * @param {{image: HTMLImageElement | null}} loadState
+ * @returns {Promise<void>}
+ */
+function decodeStandeeImage(imageSrc, loadState) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        loadState.image = image;
+        image.decoding = "async";
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("立绘解码失败"));
+        image.src = imageSrc;
+    });
+}
+
+async function loadStandeeImage(standeeSrc, standeeAlt) {
+    cancelStandeeLoad();
+
+    const loadId = standeeLoadSequence;
+    const controller = new AbortController();
+    const loadState = {
+        controller,
+        id: loadId,
+        image: null,
+        standeeSrc
+    };
+    activeStandeeLoad = loadState;
+    standeeCanvas.classList.remove("is-loaded", "has-load-error");
+    standeeCanvas.classList.add("is-loading");
+    standeeLoadingStatus.textContent = formatStandeeLoadingStatus(0, 0);
+    standeeLoadingStatus.hidden = false;
+
+    try {
+        let displaySrc = standeeObjectUrls.get(standeeSrc);
+
+        if (!displaySrc && window.location.protocol === "file:") {
+            displaySrc = standeeSrc;
+            standeeLoadingStatus.textContent = "正在加载高清立绘…";
+        } else if (!displaySrc) {
+            const standeeBlob = await fetchStandeeBlob(
+                standeeSrc,
+                controller.signal,
+                (loadedBytes, totalBytes) => {
+                    if (activeStandeeLoad?.id === loadId) {
+                        standeeLoadingStatus.textContent = formatStandeeLoadingStatus(
+                            loadedBytes,
+                            totalBytes
+                        );
+                    }
+                }
+            );
+            displaySrc = URL.createObjectURL(standeeBlob);
+            standeeObjectUrls.set(standeeSrc, displaySrc);
+        }
+
+        await decodeStandeeImage(displaySrc, loadState);
+
+        if (activeStandeeLoad?.id !== loadId) {
+            return;
+        }
+
+        standeeFullImage.src = displaySrc;
+        standeeFullImage.alt = standeeAlt;
+        standeeFullImage.dataset.loadedSrc = standeeSrc;
+        standeePreviewImage.alt = "";
+        standeeCanvas.classList.remove("is-loading", "has-load-error");
+        standeeCanvas.classList.add("is-loaded");
+        standeeLoadingStatus.hidden = true;
+        activeStandeeLoad = null;
+    } catch (error) {
+        if (error.name === "AbortError" || activeStandeeLoad?.id !== loadId) {
+            return;
+        }
+
+        activeStandeeLoad = null;
+        standeeCanvas.classList.remove("is-loading", "is-loaded");
+        standeeCanvas.classList.add("has-load-error");
+        standeeLoadingStatus.textContent = "高清立绘加载失败，请稍后重试。";
+        standeeLoadingStatus.hidden = false;
+    }
+}
+
+function selectStandeeVariant(selectedButton) {
+    const standeeSrc = selectedButton.getAttribute("data-standee-src");
+    const standeePreview = selectedButton.getAttribute("data-standee-preview");
+    const standeeAlt = selectedButton.getAttribute("data-standee-alt");
+
+    if (!standeeSrc || !standeePreview || !standeeAlt) {
+        return;
+    }
 
     standeeVariantButtons.forEach((variantButton) => {
         const isSelected = variantButton === selectedButton;
         variantButton.classList.toggle("is-active", isSelected);
         variantButton.setAttribute("aria-pressed", String(isSelected));
     });
+
+    standeePreviewImage.src = standeePreview;
+    standeePreviewImage.alt = standeeAlt;
+
+    if (
+        standeeFullImage.dataset.loadedSrc === standeeSrc
+        && standeeCanvas.classList.contains("is-loaded")
+    ) {
+        standeePreviewImage.alt = "";
+        return;
+    }
+
+    if (activeStandeeLoad?.standeeSrc === standeeSrc) {
+        return;
+    }
+
+    standeeFullImage.alt = "";
+    loadStandeeImage(standeeSrc, standeeAlt);
+}
+
+function hydrateStandeePreviews() {
+    document.querySelectorAll("[data-preview-src]").forEach((previewImage) => {
+        const previewSrc = previewImage.getAttribute("data-preview-src");
+
+        if (previewSrc && !previewImage.hasAttribute("src")) {
+            previewImage.setAttribute("src", previewSrc);
+        }
+    });
 }
 
 function openStandee(openButton) {
+    const selectedButton = document.querySelector(".standee-variant.is-active")
+        || standeeVariantButtons[0];
+
     if (typeof standeeDialog.showModal !== "function") {
-        window.open(standeeFullImage.src, "_blank", "noopener");
+        const standeeSrc = selectedButton?.getAttribute("data-standee-src");
+
+        if (standeeSrc) {
+            window.open(standeeSrc, "_blank", "noopener");
+        }
+
         return;
     }
 
     standeeOpenButton = openButton;
+    hydrateStandeePreviews();
     document.body.classList.add("is-standee-open");
     standeeDialog.showModal();
     standeeCloseButton.focus();
+
+    if (selectedButton) {
+        window.requestAnimationFrame(() => {
+            selectStandeeVariant(selectedButton);
+        });
+    }
 }
 
 function restoreStandeePageState() {
+    cancelStandeeLoad();
+    standeeCanvas.classList.remove("is-loading");
+    standeeLoadingStatus.hidden = true;
     document.body.classList.remove("is-standee-open");
 
     if (standeeOpenButton instanceof HTMLElement) {
@@ -448,6 +653,14 @@ function bindStandeeDialog() {
     });
 
     standeeDialog.addEventListener("close", restoreStandeePageState);
+
+    window.addEventListener("pagehide", () => {
+        cancelStandeeLoad();
+        standeeObjectUrls.forEach((objectUrl) => {
+            URL.revokeObjectURL(objectUrl);
+        });
+        standeeObjectUrls.clear();
+    });
 }
 
 function getRandomNumber(minValue, maxValue) {

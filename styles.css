@@ -708,6 +708,51 @@ h3 {
     object-fit: contain;
 }
 
+.standee-preview-image,
+.standee-full-image {
+    transition: opacity 180ms ease;
+}
+
+.standee-preview-image {
+    opacity: 1;
+}
+
+.standee-full-image {
+    opacity: 0;
+}
+
+.standee-canvas.is-loaded .standee-preview-image {
+    opacity: 0;
+}
+
+.standee-canvas.is-loaded .standee-full-image {
+    opacity: 1;
+}
+
+.standee-loading-status {
+    position: absolute;
+    left: 50%;
+    bottom: 28px;
+    z-index: 2;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 40px);
+    margin: 0;
+    border: 1px solid rgba(110, 72, 65, 0.24);
+    border-radius: 999px;
+    background: rgba(255, 250, 240, 0.94);
+    color: var(--color-muted);
+    padding: 7px 12px;
+    box-shadow: 0 6px 16px rgba(86, 61, 50, 0.12);
+    font-size: 13px;
+    text-align: center;
+}
+
+.standee-canvas.has-load-error .standee-loading-status {
+    border-color: rgba(189, 75, 66, 0.36);
+    color: var(--color-shrine);
+}
+
 .standee-controls {
     display: flex;
     flex-direction: column;

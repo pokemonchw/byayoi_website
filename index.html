@@ -94,6 +94,7 @@
                                 width="640"
                                 height="640"
                                 alt="手绘风格的月之神社巫女看板立绘"
+                                decoding="async"
                                 fetchpriority="high"
                             >
                             <img
@@ -102,6 +103,9 @@
                                 width="640"
                                 height="640"
                                 alt="月之神社巫女看板娘原始立绘"
+                                loading="lazy"
+                                decoding="async"
+                                fetchpriority="low"
                             >
                         </span>
                     </span>
@@ -178,12 +182,22 @@
             <div class="standee-viewer">
                 <div class="standee-canvas">
                     <img
+                        class="standee-preview-image"
+                        id="standeePreviewImage"
+                        width="240"
+                        height="395"
+                        alt="月之神社看板娘 03 的第一张立绘"
+                        decoding="async"
+                    >
+                    <img
+                        class="standee-full-image"
                         id="standeeFullImage"
-                        src="assets/03_1.png"
                         width="4000"
                         height="6577"
-                        alt="月之神社看板娘 03 的第一张立绘"
+                        alt=""
+                        decoding="async"
                     >
+                    <p class="standee-loading-status" id="standeeLoadingStatus" role="status" aria-live="polite" hidden></p>
                 </div>
 
                 <aside class="standee-controls">
@@ -194,20 +208,36 @@
                                 class="standee-variant is-active"
                                 type="button"
                                 aria-pressed="true"
-                                data-standee-src="assets/03_1.png"
+                                data-standee-src="assets/03_1.webp"
+                                data-standee-preview="assets/03_1-preview.webp"
                                 data-standee-alt="月之神社看板娘 03 的第一张立绘"
                             >
-                                <img src="assets/03_1.png" alt="" width="4000" height="6577">
+                                <img
+                                    data-preview-src="assets/03_1-preview.webp"
+                                    alt=""
+                                    width="240"
+                                    height="395"
+                                    loading="lazy"
+                                    decoding="async"
+                                >
                                 <span>立绘 1</span>
                             </button>
                             <button
                                 class="standee-variant"
                                 type="button"
                                 aria-pressed="false"
-                                data-standee-src="assets/03_2.png"
+                                data-standee-src="assets/03_2.webp"
+                                data-standee-preview="assets/03_2-preview.webp"
                                 data-standee-alt="月之神社看板娘 03 的第二张立绘"
                             >
-                                <img src="assets/03_2.png" alt="" width="4000" height="6577">
+                                <img
+                                    data-preview-src="assets/03_2-preview.webp"
+                                    alt=""
+                                    width="240"
+                                    height="395"
+                                    loading="lazy"
+                                    decoding="async"
+                                >
                                 <span>立绘 2</span>
                             </button>
                         </div>
