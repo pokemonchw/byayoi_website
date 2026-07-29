@@ -14,6 +14,7 @@
     --color-line: rgba(110, 72, 65, 0.24);
     --shadow-panel: 0 12px 28px rgba(86, 61, 50, 0.12);
     --content-width: 1120px;
+    --font-family-content: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
 }
 
 * {
@@ -34,7 +35,7 @@ body {
         repeating-linear-gradient(90deg, rgba(125, 88, 66, 0.025) 0 1px, transparent 1px 9px),
         var(--color-paper);
     color: var(--color-ink);
-    font-family: "Iowan Old Style", "Yu Mincho", "Microsoft YaHei", "PingFang SC", serif;
+    font-family: var(--font-family-content);
     line-height: 1.65;
 }
 
@@ -717,7 +718,7 @@ h3 {
 
 .contact-line strong {
     color: var(--color-ink);
-    font-family: "Iowan Old Style", "Yu Mincho", "Microsoft YaHei", "PingFang SC", serif;
+    font-family: var(--font-family-content);
     font-size: 17px;
     letter-spacing: 0;
     line-height: 1.3;
