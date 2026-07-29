@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="月之神社是一个以同人创作为主题的 ACG 社区入口，连接作品、近况与同好交流空间。">
+    <title>月之神社</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <div class="meteor-cat-layer" id="meteorCatLayer" aria-hidden="true"></div>
+
+    <header class="site-header">
+        <div class="header-inner">
+            <a class="brand" href="#top" aria-label="月之神社首页">
+                <span class="brand-mark" aria-hidden="true">月</span>
+                <span>
+                    <span class="brand-name">月之神社</span>
+                    <span class="brand-subtitle">同人社区</span>
+                </span>
+            </a>
+
+            <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="siteNav">
+                <span class="menu-toggle-lines" aria-hidden="true"></span>
+                <span class="visually-hidden">打开导航菜单</span>
+            </button>
+
+            <nav class="site-nav" id="siteNav" aria-label="主要导航">
+                <a href="#projects">作品入口</a>
+                <a href="#announcements">公告近况</a>
+                <a href="#links">常用入口</a>
+                <a href="#about">关于</a>
+                <a href="#join">参与方式</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main">
+        <!-- 首屏承担社区身份、入口和当前状态提示。 -->
+        <section class="hero-section" id="top" aria-labelledby="heroTitle">
+            <div class="hero-copy">
+                <p class="eyebrow">欢迎来到月之神社！</p>
+                <h1 class="site-title-glow" id="heroTitle">月之神社</h1>
+                <p class="hero-lead">
+                    以同人创作为主题的 ACG 社区入口。这里收着大家做过的作品、公告近况和常用去处。
+                </p>
+                <div class="hero-actions" aria-label="主要操作">
+                    <a class="button primary-button" href="#projects">查看作品入口</a>
+                    <a class="button secondary-button" href="#announcements">阅读公告近况</a>
+                </div>
+                <nav class="hero-quick-links" aria-label="快速入口">
+                    <a href="#links">常用入口</a>
+                    <span aria-hidden="true">/</span>
+                    <a href="#projects">下属作品</a>
+                    <span aria-hidden="true">/</span>
+                    <a href="#join">加入社群</a>
+                </nav>
+            </div>
+
+            <figure class="hero-visual">
+                <div class="hero-standee" tabindex="0" aria-label="看板娘图片，悬停时翻转显示另一张立绘">
+                    <div class="hero-standee-inner">
+                        <img class="standee-face standee-face-front" src="assets/miko-standee-generated.png" alt="手绘风格的月之神社巫女看板立绘">
+                        <img class="standee-face standee-face-back" src="assets/miko-standee.png" alt="月之神社巫女看板娘原始立绘">
+                    </div>
+                </div>
+                <figcaption>看板娘:03</figcaption>
+            </figure>
+        </section>
+
+        <!-- 社区入口以数据渲染，方便后续替换正式链接。 -->
+        <section class="content-section link-section" id="links" aria-labelledby="linksTitle">
+            <div class="section-heading">
+                <h2 id="linksTitle">常用入口</h2>
+            </div>
+            <div class="link-grid" id="siteLinks" aria-live="polite"></div>
+        </section>
+
+        <!-- 公告列表保持紧凑，用轻量近况替代生硬说明。 -->
+        <section class="content-section announcements-section" id="announcements" aria-labelledby="announcementsTitle">
+            <div class="section-heading">
+                <h2 id="announcementsTitle">公告与近况</h2>
+            </div>
+            <div class="announcement-list" id="announcementList" aria-live="polite"></div>
+        </section>
+
+        <!-- 作品区说明相关作品的性质、边界和访问动作。 -->
+        <section class="content-section projects-section" id="projects" aria-labelledby="projectsTitle">
+            <div class="section-heading">
+                <h2 id="projectsTitle">作品入口</h2>
+            </div>
+            <div class="project-list" id="featuredProjects" aria-live="polite"></div>
+        </section>
+
+        <section class="content-section about-section" id="about" aria-labelledby="aboutTitle">
+            <div class="section-heading">
+                <h2 id="aboutTitle">关于月之神社</h2>
+            </div>
+            <div class="about-layout">
+                <div>
+                    <p>
+                        月之神社围绕同人创作、ACG 兴趣交流和个人/社群作品聚集同好。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-section join-section" id="join" aria-labelledby="joinTitle">
+            <div class="section-heading">
+                <h2 id="joinTitle">参与与反馈</h2>
+                <p>想加入社群、补充公开资料、反馈链接失效，或参与喜欢的作品，可以从这些入口开始。</p>
+            </div>
+            <div class="join-grid" id="communityChannels" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div>
+            <strong>月之神社</strong>
+            <p>以同人创作为主题的 ACG 社区。页面整理：<time datetime="2026-07-13">2026-07-13</time></p>
+        </div>
+        <nav class="footer-nav" aria-label="页脚导航">
+            <a href="#projects">作品入口</a>
+            <a href="#announcements">公告近况</a>
+            <a href="#links">常用入口</a>
+            <a href="#about">关于</a>
+        </nav>
+    </footer>
+</body>
+</html>
