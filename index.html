@@ -11,7 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&amp;display=swap">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="miko-animation.css">
     <script src="app.js" defer></script>
+    <script src="miko-animation.js" defer></script>
 </head>
 <body>
     <a class="skip-link" href="#main">跳到主要内容</a>
@@ -159,6 +161,26 @@
             <div class="join-grid" id="communityChannels" aria-live="polite"></div>
         </section>
     </main>
+
+    <!-- 角色自身就是拖动热区，不额外添加底框、卡片或装饰元素。 -->
+    <aside
+        class="miko-float"
+        data-miko-float
+        tabindex="0"
+        aria-label="可拖动的黑白像素看板娘动画；使用方向键也可移动"
+        title="拖动角色"
+    >
+        <div class="miko-float-character">
+            <canvas
+                class="miko-float-sprite"
+                data-miko-sprite
+                width="34"
+                height="34"
+                role="img"
+                aria-label="代码绘制的短发和服像素看板娘动画"
+            ></canvas>
+        </div>
+    </aside>
 
     <!-- 看板娘立绘浮窗使用原生 dialog，支持 Esc 关闭与键盘焦点管理。 -->
     <dialog
