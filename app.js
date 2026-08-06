@@ -740,3 +740,4 @@ bindContactActions();
 bindNavigation();
 bindStandeeDialog();
 scheduleMeteorCats();
+
