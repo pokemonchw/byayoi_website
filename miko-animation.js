@@ -9,7 +9,15 @@
     const canvas = mikoFloat.querySelector("[data-miko-sprite]");
     const canvasContext = canvas instanceof HTMLCanvasElement ? canvas.getContext("2d") : null;
     const dragGrip = mikoFloat;
+    const shrineGameDialog = document.querySelector("[data-shrine-game-dialog]");
+    const shrineGameCloseButton = document.querySelector("[data-close-shrine-game]");
+    const shrineGameFrame = document.querySelector("[data-shrine-game-frame]");
+    const shrineGameLoading = document.querySelector("[data-shrine-game-loading]");
     const shouldReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const SHRINE_GAME_URL = "game/byayoi/index.html";
+    const DOUBLE_ACTIVATION_DELAY = 500;
+    const DOUBLE_ACTIVATION_DISTANCE = 28;
+    const DRAG_MOVEMENT_THRESHOLD = 6;
 
     if (!canvasContext) {
         return;
@@ -224,11 +232,75 @@
         mikoFloat.style.top = `${position.top}px`;
     }
 
+    /** 首次打开时才加载游戏，避免 iframe 资源阻塞主页首屏。 */
+    function openShrineGame() {
+        if (typeof HTMLDialogElement === "undefined"
+            || !(shrineGameDialog instanceof HTMLDialogElement)
+            || typeof shrineGameDialog.showModal !== "function") {
+            window.open(SHRINE_GAME_URL, "_blank", "noopener");
+            return;
+        }
+
+        if (shrineGameDialog.open) {
+            return;
+        }
+
+        if (shrineGameFrame instanceof HTMLIFrameElement && !shrineGameFrame.hasAttribute("src")) {
+            shrineGameFrame.src = SHRINE_GAME_URL;
+        }
+
+        document.body.classList.add("is-shrine-game-open");
+        shrineGameDialog.showModal();
+        shrineGameCloseButton?.focus();
+    }
+
+    function restoreShrineGamePageState() {
+        document.body.classList.remove("is-shrine-game-open");
+    }
+
+    function closeShrineGame() {
+        if (typeof HTMLDialogElement !== "undefined"
+            && shrineGameDialog instanceof HTMLDialogElement
+            && shrineGameDialog.open) {
+            shrineGameDialog.close();
+        }
+    }
+
+    const activationState = {
+        lastTime: 0,
+        lastX: 0,
+        lastY: 0
+    };
+
+    /** 同时覆盖桌面双击和触屏连续轻触，并排除真实拖动。 */
+    function registerActivation(event) {
+        const currentTime = Date.now();
+        const distance = Math.hypot(
+            event.clientX - activationState.lastX,
+            event.clientY - activationState.lastY
+        );
+        const isDoubleActivation = currentTime - activationState.lastTime <= DOUBLE_ACTIVATION_DELAY
+            && distance <= DOUBLE_ACTIVATION_DISTANCE;
+
+        if (isDoubleActivation) {
+            activationState.lastTime = 0;
+            openShrineGame();
+            return;
+        }
+
+        activationState.lastTime = currentTime;
+        activationState.lastX = event.clientX;
+        activationState.lastY = event.clientY;
+    }
+
     const dragState = {
         isDragging: false,
         pointerId: null,
         offsetX: 0,
-        offsetY: 0
+        offsetY: 0,
+        startX: 0,
+        startY: 0,
+        hasMoved: false
     };
 
     function startDragging(event) {
@@ -241,6 +313,9 @@
         dragState.pointerId = event.pointerId;
         dragState.offsetX = event.clientX - floatBounds.left;
         dragState.offsetY = event.clientY - floatBounds.top;
+        dragState.startX = event.clientX;
+        dragState.startY = event.clientY;
+        dragState.hasMoved = false;
         moveFloat(floatBounds.left, floatBounds.top);
         mikoFloat.classList.add("is-dragging");
         dragGrip.setPointerCapture(event.pointerId);
@@ -252,6 +327,14 @@
             return;
         }
 
+        if (Math.hypot(
+            event.clientX - dragState.startX,
+            event.clientY - dragState.startY
+        ) > DRAG_MOVEMENT_THRESHOLD) {
+            dragState.hasMoved = true;
+            activationState.lastTime = 0;
+        }
+
         moveFloat(event.clientX - dragState.offsetX, event.clientY - dragState.offsetY);
     }
 
@@ -260,16 +343,28 @@
             return;
         }
 
+        const hasMoved = dragState.hasMoved;
         dragState.isDragging = false;
         dragState.pointerId = null;
+        dragState.hasMoved = false;
         mikoFloat.classList.remove("is-dragging");
 
         if (dragGrip.hasPointerCapture(event.pointerId)) {
             dragGrip.releasePointerCapture(event.pointerId);
         }
+
+        if (!hasMoved && event.type === "pointerup") {
+            registerActivation(event);
+        }
     }
 
     function moveFloatWithKeyboard(event) {
+        if (event.key === "Enter" || event.key === " ") {
+            openShrineGame();
+            event.preventDefault();
+            return;
+        }
+
         const movementByKey = {
             ArrowLeft: [-1, 0],
             ArrowRight: [1, 0],
@@ -297,6 +392,35 @@
     dragGrip.addEventListener("pointercancel", stopDragging);
     dragGrip.addEventListener("lostpointercapture", stopDragging);
     dragGrip.addEventListener("keydown", moveFloatWithKeyboard);
+    dragGrip.addEventListener("click", (event) => {
+        // 辅助技术触发的无坐标 click 没有双击概念，直接执行等价打开动作。
+        if (event.detail === 0) {
+            openShrineGame();
+        }
+    });
+
+    if (shrineGameFrame instanceof HTMLIFrameElement) {
+        shrineGameFrame.addEventListener("load", () => {
+            if (shrineGameLoading instanceof HTMLElement) {
+                shrineGameLoading.hidden = true;
+            }
+        });
+    }
+
+    shrineGameCloseButton?.addEventListener("click", closeShrineGame);
+
+    if (typeof HTMLDialogElement !== "undefined" && shrineGameDialog instanceof HTMLDialogElement) {
+        shrineGameDialog.addEventListener("click", (event) => {
+            if (event.target === shrineGameDialog) {
+                closeShrineGame();
+            }
+        });
+        shrineGameDialog.addEventListener("cancel", (event) => {
+            event.preventDefault();
+            closeShrineGame();
+        });
+        shrineGameDialog.addEventListener("close", restoreShrineGamePageState);
+    }
 
     window.addEventListener("resize", () => {
         if (!mikoFloat.style.left) {

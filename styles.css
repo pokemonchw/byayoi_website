@@ -89,7 +89,8 @@ body.is-menu-open {
     overflow: hidden;
 }
 
-body.is-standee-open {
+body.is-standee-open,
+body.is-shrine-game-open {
     overflow: hidden;
 }
 

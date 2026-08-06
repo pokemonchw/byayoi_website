@@ -15,6 +15,32 @@
     -webkit-user-select: none;
 }
 
+.miko-float::after {
+    position: absolute;
+    right: 4px;
+    bottom: 2px;
+    border: 1px solid rgba(110, 72, 65, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 250, 240, 0.9);
+    color: var(--color-muted);
+    padding: 3px 8px;
+    box-shadow: 0 4px 12px rgba(57, 35, 36, 0.12);
+    content: "双击进入神社";
+    font-size: 11px;
+    line-height: 1.4;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity 140ms ease, transform 140ms ease;
+    white-space: nowrap;
+}
+
+.miko-float:hover::after,
+.miko-float:focus-visible::after {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .miko-float.is-dragging {
     cursor: grabbing;
 }
@@ -40,6 +66,144 @@
     image-rendering: crisp-edges;
 }
 
+/* 游戏以独立 iframe 嵌入原生对话框，保留经营进度并隔离两套页面样式。 */
+.shrine-game-dialog {
+    width: min(calc(100% - 24px), 1440px);
+    height: min(calc(100dvh - 24px), 940px);
+    max-width: none;
+    max-height: none;
+    overflow: hidden;
+    border: 2px solid rgba(110, 72, 65, 0.36);
+    border-radius: 12px;
+    background: var(--color-panel);
+    color: var(--color-ink);
+    padding: 0;
+    box-shadow: 10px 14px 0 rgba(57, 35, 36, 0.2), 0 30px 90px rgba(57, 35, 36, 0.34);
+}
+
+.shrine-game-dialog::backdrop {
+    background: rgba(52, 35, 39, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.shrine-game-dialog[open] {
+    display: block;
+    animation: shrineGameDialogIn 180ms ease-out;
+}
+
+.shrine-game-card {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    background: var(--color-panel);
+}
+
+.shrine-game-header {
+    display: flex;
+    min-height: 64px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px dashed rgba(110, 72, 65, 0.3);
+    padding: 10px 14px 10px 18px;
+}
+
+.shrine-game-kicker {
+    margin: 0 0 1px;
+    color: var(--color-shrine);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.shrine-game-header h2 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.2;
+    text-decoration: none;
+}
+
+.shrine-game-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.shrine-game-external-link {
+    color: var(--color-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-underline-offset: 4px;
+}
+
+.shrine-game-external-link:hover {
+    color: var(--color-shrine);
+}
+
+.shrine-game-close {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    background: rgba(255, 250, 240, 0.9);
+    padding: 0 0 3px;
+    font-size: 29px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.shrine-game-close:hover {
+    border-color: rgba(189, 75, 66, 0.42);
+    background: rgba(255, 232, 218, 0.94);
+}
+
+.shrine-game-frame-shell {
+    position: relative;
+    min-height: 0;
+    flex: 1 1 auto;
+    background: #413b31;
+}
+
+.shrine-game-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #413b31;
+}
+
+.shrine-game-loading {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    z-index: 1;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    border: 1px solid rgba(110, 72, 65, 0.3);
+    border-radius: 999px;
+    background: rgba(255, 250, 240, 0.94);
+    color: var(--color-muted);
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+@keyframes shrineGameDialogIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.99);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 @keyframes mikoFloatIdle {
     0%,
     100% {
@@ -57,6 +221,38 @@
         bottom: 12px;
         width: 120px;
         height: 120px;
+    }
+
+    .miko-float::after {
+        display: none;
+    }
+
+    .shrine-game-dialog {
+        width: calc(100% - 8px);
+        height: calc(100dvh - 8px);
+        border-radius: 8px;
+    }
+
+    .shrine-game-header {
+        min-height: 56px;
+        padding: 8px 9px 8px 12px;
+    }
+
+    .shrine-game-kicker {
+        display: none;
+    }
+
+    .shrine-game-header h2 {
+        font-size: 19px;
+    }
+
+    .shrine-game-external-link {
+        font-size: 12px;
+    }
+
+    .shrine-game-close {
+        width: 38px;
+        height: 38px;
     }
 }
 

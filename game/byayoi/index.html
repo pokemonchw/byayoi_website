@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8f3428">
+  <title>月之神社｜神社经营绘卷</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <main class="game-shell">
+    <header class="masthead">
+      <div class="title-seal" aria-hidden="true">月<br>之</div>
+      <div class="title-copy">
+        <p class="eyebrow">山间社务日记</p>
+        <h1>月之神社</h1>
+      </div>
+      <div class="header-actions">
+        <button class="round-button" id="soundBtn" aria-label="切换声音" title="切换声音"><span class="speaker-icon"></span></button>
+        <button class="text-button" id="helpBtn">游戏说明</button>
+      </div>
+    </header>
+
+    <section class="status-ribbon" aria-label="经营状态">
+      <div class="date-block">
+        <span class="kicker" id="eraText">令和</span>
+        <strong><span id="monthText">一月</span><span id="dayText">一日</span></strong>
+        <span class="date-meta"><time id="timeText" datetime="00:00:00">00:00:00</time><span aria-hidden="true">·</span><span id="weatherText">晴</span></span>
+      </div>
+      <div class="resource"><span class="resource-icon coin-icon" aria-hidden="true"></span><span><small>奉纳金</small><b id="moneyValue">2,400</b><em>圆</em></span></div>
+      <div class="resource"><span class="resource-icon faith-icon" aria-hidden="true"></span><span><small>信仰</small><b id="faithValue">18</b><em>德</em></span></div>
+      <div class="resource"><span class="resource-icon visitor-icon" aria-hidden="true"></span><span><small>参拜客</small><b id="visitorsValue">0</b><em>人</em></span></div>
+      <div class="resource"><span class="resource-icon clean-icon" aria-hidden="true"></span><span><small>整洁</small><b id="cleanValue">62</b><em>%</em></span></div>
+      <div class="energy-block">
+        <span>今日精力</span>
+        <div class="energy-pips" id="energyPips" aria-label="剩余精力"></div>
+      </div>
+    </section>
+
+    <div class="game-grid">
+      <section class="scene-card panel-edge" aria-label="神社景色">
+        <div class="scene" id="scene">
+          <div class="sun"></div>
+          <div class="cloud cloud-a"><i></i><i></i><i></i></div>
+          <div class="cloud cloud-b"><i></i><i></i><i></i></div>
+          <div class="mountain mountain-back"></div>
+          <div class="mountain mountain-front"></div>
+          <div class="forest forest-back" id="forestBack"></div>
+          <div class="shrine">
+            <div class="roof roof-top"><i></i></div>
+            <div class="gable"><span class="crest">三</span></div>
+            <div class="shrine-body">
+              <div class="wall-panel"></div><div class="shrine-door"><i></i><i></i><i></i></div><div class="wall-panel"></div>
+            </div>
+            <div class="veranda"></div>
+            <div class="foundation"></div>
+          </div>
+          <div class="tree tree-left"><i></i><i></i><i></i><b></b></div>
+          <div class="tree tree-right"><i></i><i></i><i></i><b></b></div>
+          <div class="ground"></div>
+          <div class="stone-path"><i></i><i></i><i></i><i></i></div>
+          <div class="lantern lantern-left"><b></b><i></i></div>
+          <div class="lantern lantern-right"><b></b><i></i></div>
+          <div class="torii"><div class="beam beam-top"></div><div class="beam beam-low"></div><div class="post post-left"></div><div class="post post-right"></div><span class="plaque">月之</span></div>
+          <div class="character" id="character" aria-hidden="true">
+            <div class="pixel-miko">
+              <i class="pixel-base-outline"></i><i class="pixel-base-hair-dark"></i><i class="pixel-base-hair"></i><i class="pixel-base-hair-light"></i><i class="pixel-base-skin"></i><i class="pixel-base-blush"></i><i class="pixel-base-eye-dark"></i><i class="pixel-base-gold"></i><i class="pixel-base-white"></i><i class="pixel-base-pale-pink"></i><i class="pixel-base-pink"></i><i class="pixel-base-red"></i><i class="pixel-base-deep-red"></i>
+              <span class="pixel-face pixel-face-open">
+                <i class="pixel-open-outline"></i><i class="pixel-open-hair-dark"></i><i class="pixel-open-hair"></i><i class="pixel-open-hair-light"></i><i class="pixel-open-skin"></i><i class="pixel-open-blush"></i><i class="pixel-open-eye-dark"></i><i class="pixel-open-gold"></i><i class="pixel-open-white"></i><i class="pixel-open-pale-pink"></i><i class="pixel-open-pink"></i><i class="pixel-open-red"></i><i class="pixel-open-deep-red"></i>
+              </span>
+              <span class="pixel-face pixel-face-blink">
+                <i class="pixel-blink-outline"></i><i class="pixel-blink-hair-dark"></i><i class="pixel-blink-hair"></i><i class="pixel-blink-hair-light"></i><i class="pixel-blink-skin"></i><i class="pixel-blink-blush"></i><i class="pixel-blink-eye-dark"></i><i class="pixel-blink-gold"></i><i class="pixel-blink-white"></i><i class="pixel-blink-pale-pink"></i><i class="pixel-blink-pink"></i><i class="pixel-blink-red"></i><i class="pixel-blink-deep-red"></i>
+              </span>
+            </div>
+          </div>
+          <div class="visitor-sprite" id="visitorSprite" aria-hidden="true"><div></div><i></i></div>
+          <div class="weather-layer" id="weatherLayer"></div>
+          <div class="floating-text" id="floatingText"></div>
+          <div class="scene-caption"><span id="sceneTime">朝</span><b id="sceneMood">山风清朗，鸟居下还没有脚步声。</b></div>
+        </div>
+      </section>
+
+      <aside class="side-column">
+        <section class="workbench panel-edge">
+        <div class="workbench-head">
+          <div><span class="vertical-label">社务选择</span><h2>今天，要做些什么？</h2></div>
+          <p id="actionHint">每项工作消耗一点精力。好好经营，让这座小神社重新热闹起来。</p>
+        </div>
+        <div class="action-grid" id="actionGrid">
+          <button class="action-card" data-action="sweep">
+            <span class="action-no">壹</span><span class="action-art broom-art"><i></i><b></b></span>
+            <strong>清扫境内</strong><small>整洁 +18 · 信仰 +1</small><em>消耗 1 精力</em>
+          </button>
+          <button class="action-card" data-action="pray">
+            <span class="action-no">贰</span><span class="action-art bell-art"><i></i><b></b></span>
+            <strong>主持祈愿</strong><small>信仰 +5 · 参拜客增加</small><em>消耗 1 精力</em>
+          </button>
+          <button class="action-card" data-action="omamori">
+            <span class="action-no">叁</span><span class="action-art charm-art"><i>福</i><b></b></span>
+            <strong>缝制御守</strong><small>获得奉纳金 · 需要整洁</small><em>消耗 1 精力</em>
+          </button>
+          <button class="action-card" data-action="publicity">
+            <span class="action-no">肆</span><span class="action-art flyer-art"><i>祭</i><b></b></span>
+            <strong>街口宣传</strong><small>明日客流提升 · 花费 300 圆</small><em>消耗 1 精力</em>
+          </button>
+        </div>
+        <div class="day-controls">
+          <div class="forecast"><span>明日预报</span><b id="forecastText">晴 · 客流平稳</b></div>
+          <button class="upgrade-button" id="upgradeBtn"><span class="hammer-icon"></span><b>修缮神社</b><small>提升设施与收入</small></button>
+          <button class="end-day-button" id="endDayBtn"><span>收工</span><b>结束今日</b><i>→</i></button>
+        </div>
+        </section>
+
+        <section class="notice-board panel-edge">
+          <div class="section-heading"><span>回览板</span><h2>今日社务</h2><i>本日</i></div>
+          <div class="daily-goal" id="dailyGoal">
+            <div class="goal-stamp" id="goalStamp">未</div>
+            <div><strong id="goalTitle">迎接 12 位参拜客</strong><p id="goalProgress">目前 0 / 12</p></div>
+          </div>
+          <ul class="task-list" id="taskList"></ul>
+        </section>
+
+        <section class="journal panel-edge">
+          <div class="section-heading small"><span>社务日记</span><h2>参拜簿</h2></div>
+          <div class="log-list" id="logList" aria-live="polite"></div>
+        </section>
+      </aside>
+    </div>
+
+    <footer><span>月之神社社务所</span><i></i><p>愿人与神明的缘分，在此重新相连。</p><i></i><span>经营记录自动保存</span></footer>
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="modalClose" aria-label="关闭">×</button>
+      <div id="modalContent"></div>
+    </section>
+  </div>
+
+  <template id="eventTemplate">
+    <div class="event-view">
+      <span class="event-kicker">境内小记</span><div class="event-illustration"><div class="event-sun"></div><div class="event-gate"></div></div>
+      <h2 id="eventTitle"></h2><p id="eventBody"></p><div class="event-effects" id="eventEffects"></div>
+      <button class="primary-button" id="eventConfirm">知道了</button>
+    </div>
+  </template>
+  <script src="game.js"></script>
+</body>
+</html>

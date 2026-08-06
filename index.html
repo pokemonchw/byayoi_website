@@ -167,8 +167,11 @@
         class="miko-float"
         data-miko-float
         tabindex="0"
-        aria-label="可拖动的黑白像素看板娘动画；使用方向键也可移动"
-        title="拖动角色"
+        role="button"
+        aria-haspopup="dialog"
+        aria-controls="shrineGameDialog"
+        aria-label="可拖动的黑白像素看板娘动画；双击打开神社经营模拟游戏，使用方向键也可移动"
+        title="拖动角色，双击进入神社经营游戏"
     >
         <div class="miko-float-character">
             <canvas
@@ -181,6 +184,55 @@
             ></canvas>
         </div>
     </aside>
+
+    <!-- 像素看板娘的隐藏游戏入口；iframe 按首次打开延迟加载，避免拖慢主页。 -->
+    <dialog
+        class="shrine-game-dialog"
+        id="shrineGameDialog"
+        aria-labelledby="shrineGameDialogTitle"
+        aria-describedby="shrineGameDialogHint"
+        data-shrine-game-dialog
+    >
+        <div class="shrine-game-card">
+            <header class="shrine-game-header">
+                <div>
+                    <p class="shrine-game-kicker">03的社务时间</p>
+                    <h2 id="shrineGameDialogTitle">神社经营绘卷</h2>
+                </div>
+                <div class="shrine-game-actions">
+                    <a
+                        class="shrine-game-external-link"
+                        href="game/byayoi/index.html"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        在新页面打开
+                    </a>
+                    <button
+                        class="shrine-game-close"
+                        type="button"
+                        aria-label="关闭神社经营游戏"
+                        data-close-shrine-game
+                    >
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+            </header>
+            <p class="visually-hidden" id="shrineGameDialogHint">
+                游戏会在此悬浮卡片内运行；按 Esc 可以关闭并返回主页。
+            </p>
+            <div class="shrine-game-frame-shell">
+                <p class="shrine-game-loading" role="status" aria-live="polite" data-shrine-game-loading>
+                    正在打开神社……
+                </p>
+                <iframe
+                    class="shrine-game-frame"
+                    title="月之神社神社经营模拟游戏"
+                    data-shrine-game-frame
+                ></iframe>
+            </div>
+        </div>
+    </dialog>
 
     <!-- 看板娘立绘浮窗使用原生 dialog，支持 Esc 关闭与键盘焦点管理。 -->
     <dialog
