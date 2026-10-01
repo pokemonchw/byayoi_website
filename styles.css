@@ -1062,6 +1062,8 @@ h3 {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 24px;
     padding: 24px;
+    /* 从发布动态跳转时，为固定导航留出空间。 */
+    scroll-margin-top: 88px;
 }
 
 .project-meta {

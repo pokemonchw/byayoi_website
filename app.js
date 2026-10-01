@@ -67,6 +67,16 @@ const siteLinks = [
 
 const announcementList = [
     {
+        id: "dfcn-release",
+        title: "《矮人要塞》汉化mod发布",
+        // 日期记录本条公告的刊登时间。
+        date: "2026-10-01",
+        summary: "原神，启动！",
+        targetUrl: "#project-dfcn",
+        actionLabel: "查看作品",
+        actionType: "link"
+    },
+    {
         id: "mascot-standee-update",
         title: "看板娘立绘更新",
         date: "2026-07-29",
@@ -111,6 +121,24 @@ const featuredProjects = [
             {
                 label: "查看作品",
                 url: "https://goblinempire.byayoi.org/"
+            }
+        ],
+        notice: ""
+    },
+    {
+        id: "dfcn",
+        name: "矮人要塞汉化mod",
+        type: "游戏汉化 Mod",
+        status: "社群创作",
+        summary: "《Dwarf Fortress（矮人要塞）》的简体中文汉化 Mod。",
+        links: [
+            {
+                label: "GitHub",
+                url: "https://github.com/pokemonchw/dfcn"
+            },
+            {
+                label: "Steam 创意工坊",
+                url: "https://steamcommunity.com/sharedfiles/filedetails/?id=3811193379"
             }
         ],
         notice: ""
