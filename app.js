@@ -67,6 +67,15 @@ const siteLinks = [
 
 const announcementList = [
     {
+        id: "dflvzh-release",
+        title: "《矮人要塞》传说查看器发布",
+        date: "2026-10-16",
+        summary: "传说从这里开始~",
+        targetUrl: "tools/dflvzh/index.html",
+        actionLabel: "打开工具",
+        actionType: "link"
+    },
+    {
         id: "dfcn-release",
         title: "《矮人要塞》汉化mod发布",
         // 日期记录本条公告的刊登时间。
@@ -139,6 +148,20 @@ const featuredProjects = [
             {
                 label: "Steam 创意工坊",
                 url: "https://steamcommunity.com/sharedfiles/filedetails/?id=3811193379"
+            }
+        ],
+        notice: ""
+    },
+    {
+        id: "dflvzh",
+        name: "矮人要塞传说查看器",
+        type: "浏览器工具",
+        status: "社群创作",
+        summary: "用中文浏览《矮人要塞》的世界传说。",
+        links: [
+            {
+                label: "打开工具",
+                url: "tools/dflvzh/index.html"
             }
         ],
         notice: ""

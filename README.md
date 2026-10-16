@@ -9,6 +9,7 @@
 - `app.js`：主页内容数据与小型交互逻辑，包含 `siteLinks`、`announcementList`、`featuredProjects` 和 `communityChannels`。
 - `miko-animation.js` / `miko-animation.css`：像素看板娘的绘制、拖动，以及双击打开神社经营游戏的悬浮卡片。
 - `game/byayoi/`：嵌入悬浮卡片的神社经营模拟游戏。
+- `tools/dflvzh/`：Legends Viewer 纯浏览器版，包含运行资源、许可与来源说明，可直接打开 `index.html` 导入《矮人要塞》的 Legends 文件。
 - `assets/miko-standee.png`：用户提供的首页看板草图透明线稿。
 - `assets/miko-standee-generated.png`：根据草图重绘的首页巫女看板透明线稿。
 - `03_1.png`、`03_2.png`：完整立绘浮窗使用的两张原始图片。
