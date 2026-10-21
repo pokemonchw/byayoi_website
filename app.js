@@ -24,6 +24,7 @@
  * @typedef {Object} FeaturedProject
  * @property {string} id
  * @property {string} name
+ * @property {"community" | "dwarfFortress"} category
  * @property {string} type
  * @property {string} status
  * @property {string} summary
@@ -67,6 +68,16 @@ const siteLinks = [
 
 const announcementList = [
     {
+        id: "dfbluepaint-entry",
+        title: "矮人要塞蓝图规划器加入工具入口",
+        // 日期记录本条入口公告的刊登时间，并非工具首次发布日。
+        date: "2026-10-21",
+        summary: "在浏览器中规划《矮人要塞》的地图蓝图。",
+        targetUrl: "tools/dfbluepaint/index.html",
+        actionLabel: "打开工具",
+        actionType: "link"
+    },
+    {
         id: "dflvzh-release",
         title: "《矮人要塞》传说查看器发布",
         date: "2026-10-16",
@@ -109,6 +120,7 @@ const featuredProjects = [
     {
         id: "dieloli",
         name: "死亡萝莉",
+        category: "community",
         type: "文字模拟游戏",
         status: "社群创作",
         summary: "以文字和 ASCII 表现为主，带着自由演算 NPC、开放玩法和同人实验气质的作品。",
@@ -123,6 +135,7 @@ const featuredProjects = [
     {
         id: "goblin-empire",
         name: "哥布林帝国",
+        category: "community",
         type: "浏览器经营小游戏",
         status: "创作企划",
         summary: "以中文策划、渐进解锁和文本管理界面为核心，适合慢慢打磨的小型作品。",
@@ -137,6 +150,7 @@ const featuredProjects = [
     {
         id: "dfcn",
         name: "矮人要塞汉化mod",
+        category: "dwarfFortress",
         type: "游戏汉化 Mod",
         status: "社群创作",
         summary: "《Dwarf Fortress（矮人要塞）》的简体中文汉化 Mod。",
@@ -155,6 +169,7 @@ const featuredProjects = [
     {
         id: "dflvzh",
         name: "矮人要塞传说查看器",
+        category: "dwarfFortress",
         type: "浏览器工具",
         status: "社群创作",
         summary: "用中文浏览《矮人要塞》的世界传说。",
@@ -162,6 +177,21 @@ const featuredProjects = [
             {
                 label: "打开工具",
                 url: "tools/dflvzh/index.html"
+            }
+        ],
+        notice: ""
+    },
+    {
+        id: "dfbluepaint",
+        name: "矮人要塞蓝图规划器",
+        category: "dwarfFortress",
+        type: "浏览器工具",
+        status: "社群创作",
+        summary: "在浏览器中规划《矮人要塞》的地图蓝图。",
+        links: [
+            {
+                label: "打开工具",
+                url: "tools/dfbluepaint/index.html"
             }
         ],
         notice: ""
@@ -303,32 +333,102 @@ function renderLatestAnnouncement() {
 }
 
 function renderFeaturedProjects() {
-    const listElement = document.querySelector("#featuredProjects");
-    listElement.innerHTML = featuredProjects.map((project) => {
-        const linkMarkup = project.links.map((projectLink) => `
-            <a class="button secondary-button" href="${projectLink.url}"${createExternalAttrs(projectLink.url)}>${projectLink.label}</a>
-        `).join("");
-        const noticeMarkup = project.notice
-            ? `<p class="project-notice">${project.notice}</p>`
-            : "";
+    document.querySelectorAll("#featuredProjects [data-project-category]").forEach((panel) => {
+        const categoryProjects = featuredProjects.filter((project) => project.category === panel.dataset.projectCategory);
+        panel.innerHTML = categoryProjects.map((project) => {
+            const linkMarkup = project.links.map((projectLink) => `
+                <a class="button secondary-button" href="${projectLink.url}"${createExternalAttrs(projectLink.url)}>${projectLink.label}</a>
+            `).join("");
+            const noticeMarkup = project.notice
+                ? `<p class="project-notice">${project.notice}</p>`
+                : "";
 
-        return `
-            <article class="project-card" id="project-${project.id}">
-                <div>
-                    <h3>${project.name}</h3>
-                    <div class="project-meta" aria-label="作品标签">
-                        <span class="project-tag">${project.type}</span>
-                        <span class="project-tag">${project.status}</span>
+            return `
+                <article class="project-card" id="project-${project.id}">
+                    <div>
+                        <h3>${project.name}</h3>
+                        <div class="project-meta" aria-label="作品标签">
+                            <span class="project-tag">${project.type}</span>
+                            <span class="project-tag">${project.status}</span>
+                        </div>
+                        <p>${project.summary}</p>
+                        ${noticeMarkup}
                     </div>
-                    <p>${project.summary}</p>
-                    ${noticeMarkup}
-                </div>
-                <div class="project-actions">
-                    ${linkMarkup}
-                </div>
-            </article>
-        `;
-    }).join("");
+                    <div class="project-actions">
+                        ${linkMarkup}
+                    </div>
+                </article>
+            `;
+        }).join("");
+    });
+}
+
+/** 切换作品页签，同时同步键盘入口与面板的可见状态。 @param {HTMLButtonElement} activeTab */
+function selectProjectTab(activeTab) {
+    document.querySelectorAll("#projectTabs [role=\"tab\"]").forEach((tab) => {
+        const isSelected = tab === activeTab;
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.tabIndex = isSelected ? 0 : -1;
+        document.getElementById(tab.getAttribute("aria-controls")).hidden = !isSelected;
+    });
+}
+
+/** 公告链接和直接访问作品锚点时，先展开所属页签再定位。 @param {string} projectHash */
+function revealLinkedProject(projectHash) {
+    const project = featuredProjects.find((project) => projectHash === `#project-${project.id}`);
+
+    if (!project) {
+        return;
+    }
+
+    const projectCard = document.getElementById(`project-${project.id}`);
+    const panel = projectCard.closest("[role=\"tabpanel\"]");
+    selectProjectTab(document.getElementById(panel.getAttribute("aria-labelledby")));
+    projectCard.scrollIntoView({ block: "start" });
+}
+
+// 采用自动激活页签：方向键循环切换，Home / End 跳至首尾。
+function bindProjectTabs() {
+    const tabs = Array.from(document.querySelectorAll("#projectTabs [role=\"tab\"]"));
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => selectProjectTab(tab));
+        tab.addEventListener("keydown", (event) => {
+            let nextIndex;
+
+            switch (event.key) {
+                case "ArrowRight":
+                    nextIndex = (index + 1) % tabs.length;
+                    break;
+                case "ArrowLeft":
+                    nextIndex = (index - 1 + tabs.length) % tabs.length;
+                    break;
+                case "Home":
+                    nextIndex = 0;
+                    break;
+                case "End":
+                    nextIndex = tabs.length - 1;
+                    break;
+                default:
+                    return;
+            }
+
+            event.preventDefault();
+            selectProjectTab(tabs[nextIndex]);
+            tabs[nextIndex].focus();
+        });
+    });
+
+    document.addEventListener("click", (event) => {
+        const projectLink = event.target.closest("a[href^=\"#project-\"]");
+
+        if (projectLink) {
+            // 同一锚点重复点击不会触发 hashchange，仍需重新打开隐藏的面板。
+            revealLinkedProject(projectLink.getAttribute("href"));
+        }
+    });
+    window.addEventListener("hashchange", () => revealLinkedProject(window.location.hash));
+    revealLinkedProject(window.location.hash);
 }
 
 function renderCommunityChannels() {
@@ -787,6 +887,7 @@ renderAnnouncements();
 renderLatestAnnouncement();
 renderFeaturedProjects();
 renderCommunityChannels();
+bindProjectTabs();
 bindContactActions();
 bindNavigation();
 bindStandeeDialog();

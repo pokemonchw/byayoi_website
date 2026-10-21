@@ -132,12 +132,49 @@
             <div class="announcement-list" id="announcementList" aria-live="polite"></div>
         </section>
 
-        <!-- 作品区说明相关作品的性质、边界和访问动作。 -->
+        <!-- 作品按社团创作与矮人要塞相关内容分组，保留作品锚点供公告跳转。 -->
         <section class="content-section projects-section" id="projects" aria-labelledby="projectsTitle">
             <div class="section-heading">
                 <h2 id="projectsTitle">作品入口</h2>
             </div>
-            <div class="project-list" id="featuredProjects" aria-live="polite"></div>
+            <div class="project-tabs" id="projectTabs" role="tablist" aria-label="作品分类">
+                <button
+                    class="project-tab"
+                    id="communityProjectsTab"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="communityProjectsPanel"
+                >社团作品</button>
+                <button
+                    class="project-tab"
+                    id="dwarfFortressProjectsTab"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="dwarfFortressProjectsPanel"
+                    tabindex="-1"
+                >矮人要塞相关</button>
+            </div>
+            <div id="featuredProjects">
+                <div
+                    class="project-list"
+                    id="communityProjectsPanel"
+                    role="tabpanel"
+                    aria-labelledby="communityProjectsTab"
+                    data-project-category="community"
+                    tabindex="0"
+                ></div>
+                <div
+                    class="project-list"
+                    id="dwarfFortressProjectsPanel"
+                    role="tabpanel"
+                    aria-labelledby="dwarfFortressProjectsTab"
+                    data-project-category="dwarfFortress"
+                    tabindex="0"
+                    hidden
+                ></div>
+            </div>
         </section>
 
         <section class="content-section about-section" id="about" aria-labelledby="aboutTitle">

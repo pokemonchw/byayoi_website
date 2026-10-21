@@ -1057,6 +1057,43 @@ h3 {
     white-space: nowrap;
 }
 
+/* 页签沿用纸张与朱红配色，小屏保持两个入口并排可见。 */
+.project-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--color-line);
+}
+
+.project-tab {
+    min-height: 48px;
+    margin-bottom: -2px;
+    border: 2px solid transparent;
+    border-radius: 8px 8px 0 0;
+    background: transparent;
+    padding: 10px 18px;
+    color: var(--color-muted);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.project-tab:hover {
+    background: var(--color-panel);
+    color: var(--color-ink);
+}
+
+.project-tab[aria-selected="true"] {
+    border-color: var(--color-line);
+    border-bottom-color: var(--color-shrine);
+    background: var(--color-panel-strong);
+    color: var(--color-ink);
+}
+
+/* 显式隐藏未选面板，避免 project-list 的 grid 覆盖浏览器 hidden 样式。 */
+.project-list[hidden] {
+    display: none;
+}
+
 .project-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#244c3e" />
+    <meta
+      name="description"
+      content="要塞蓝图：支持跨 Z 轴编辑、楼梯连接与本地保存的矮人要塞地图规划工具。"
+    />
+    <title>要塞蓝图 · 矮人要塞地图规划</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23244c3e'/%3E%3Cpath d='M9 29V13h5v5h4V9h5v9h4v-5h5v16H9Z' fill='%23e6e8cf'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="model.js"></script>
+    <script defer src="maze.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <a href="./" class="brand" aria-label="要塞蓝图首页"
+        ><span class="brand-mark"
+          ><svg viewBox="0 0 32 32">
+            <path d="M4 26V10h6v6h3V5h6v11h3v-6h6v16H4Z" />
+            <path d="M14 26v-6h4v6" class="brand-door" /></svg></span
+        ><span><strong>要塞蓝图</strong><small>FORTRESS BLUEPRINT</small></span></a
+      >
+      <nav class="view-tabs" aria-label="工作视图">
+        <button class="view-tab active" data-view="plan"><span data-icon="map"></span>地图规划</button
+        ><button class="view-tab" data-view="section">
+          <span data-icon="layers"></span>纵向剖面<span class="tiny-tag">Z</span>
+        </button>
+      </nav>
+      <div class="header-end">
+        <button
+          class="icon-btn mobile-levels-btn"
+          id="mobile-levels-btn"
+          title="楼层与跨层编辑"
+          aria-label="楼层与跨层编辑"
+          aria-expanded="false"
+          aria-controls="right-panel"
+          data-icon="layers"
+        ></button
+        ><button
+          class="icon-btn"
+          id="settings-btn"
+          title="编辑器设置"
+          aria-label="编辑器设置"
+          data-icon="settings"
+        ></button
+        ><span class="local-badge"><i></i>本地工作空间</span
+        ><button
+          class="icon-btn"
+          id="help-btn"
+          title="使用帮助与快捷键"
+          aria-label="使用帮助与快捷键"
+          data-icon="help"
+        ></button
+        ><span class="avatar">山</span>
+      </div>
+    </header>
+    <div class="project-bar">
+      <div class="project-heading">
+        <span class="project-icon" data-icon="folder"></span>
+        <div>
+          <div class="title-line">
+            <button id="project-title" title="重命名要塞">要塞</button><span class="project-tag">规划中</span>
+          </div>
+          <p>
+            <button
+              id="project-dimensions"
+              class="size-button"
+              title="自定义当前地图宽高"
+              aria-label="修改地图尺寸"
+            >
+              192 × 192 格</button
+            ><span class="dot">·</span><span id="project-layers">5 个 Z 层</span><span class="dot">·</span
+            ><span id="save-status">已自动保存到本地</span>
+          </p>
+        </div>
+      </div>
+      <div class="project-actions">
+        <button class="button" id="new-btn"><span data-icon="plus"></span><span>新建</span></button
+        ><button class="button" id="import-btn"><span data-icon="upload"></span><span>导入</span></button
+        ><button class="button primary" id="export-btn">
+          <span data-icon="download"></span>导出蓝图<span data-icon="chevron-down"></span>
+        </button>
+      </div>
+    </div>
+    <main class="workspace">
+      <aside class="left-panel">
+        <div class="panel-title">绘图工具 <span class="eyebrow">TOOLS</span></div>
+        <div class="tools-grid" id="tools-grid"></div>
+        <div class="brush-options">
+          <label for="brush-size">笔刷大小</label
+          ><select id="brush-size">
+            <option value="1">1 × 1</option>
+            <option value="2">2 × 2</option>
+            <option value="3">3 × 3</option>
+            <option value="5">5 × 5</option>
+          </select>
+        </div>
+        <div class="palette-heading">
+          <span class="panel-title">建造素材</span><span class="eyebrow">PALETTE</span>
+        </div>
+        <div class="palette-actions">
+          <button class="button" id="add-material" title="新建自定义素材" aria-label="新建自定义素材">
+            <span data-icon="plus"></span><span>自定义</span>
+          </button>
+          <button class="button" id="manage-materials" title="管理素材库" aria-label="管理素材库">
+            <span data-icon="edit"></span><span>管理</span>
+          </button>
+        </div>
+        <label class="palette-search"
+          ><span class="sr-only">搜索素材名称或功能</span
+          ><input id="material-search" type="search" placeholder="搜索名称或功能…" autocomplete="off"
+        /></label>
+        <div class="palette-tabs" role="tablist" aria-label="素材分类">
+          <button class="active" data-category="all" role="tab" aria-selected="true">全部</button
+          ><button data-category="地形" role="tab" aria-selected="false">地形</button
+          ><button data-category="设施" role="tab" aria-selected="false">设施</button
+          ><button data-category="建筑" role="tab" aria-selected="false">建筑</button>
+          <button data-category="分区" role="tab" aria-selected="false">区域</button>
+          <button data-category="功能" role="tab" aria-selected="false">功能</button>
+        </div>
+        <div id="materials" class="materials"></div>
+        <div class="selected-material">
+          <span id="selected-swatch" class="material-swatch"></span>
+          <div><small>当前素材</small><strong id="selected-name">开掘 / 地板</strong></div>
+          <kbd id="selected-code">01</kbd>
+        </div>
+        <div class="material-details" id="material-details" hidden>
+          <p id="selected-description"></p>
+          <div class="material-detail-actions">
+            <button class="button" id="edit-material">编辑素材</button
+            ><button class="button" id="stamp-material">放置模板</button>
+          </div>
+          <button class="button" id="rotate-stamp" hidden>旋转 90°</button>
+        </div>
+        <div class="tip-card">
+          <span data-icon="spark"></span>
+          <div>
+            <strong>伟大的要塞，始于一格。</strong>
+            <p>先规划，再开掘。让每一层都井井有条。</p>
+          </div>
+        </div>
+        <button class="shortcuts-link" id="shortcuts-btn">
+          <span data-icon="keyboard"></span>快捷键指南<span>?</span>
+        </button>
+      </aside>
+      <section class="editor" aria-label="地图编辑器">
+        <div class="editor-toolbar">
+          <div class="toolbar-group">
+            <button
+              class="icon-btn"
+              id="undo-btn"
+              aria-label="撤销"
+              title="撤销 Ctrl+Z"
+              data-icon="undo"
+            ></button
+            ><button
+              class="icon-btn"
+              id="redo-btn"
+              aria-label="重做"
+              title="重做 Ctrl+Shift+Z"
+              data-icon="redo"
+            ></button
+            ><button
+              class="icon-btn"
+              id="paste-btn"
+              aria-label="粘贴选区"
+              title="粘贴选区 Ctrl+V"
+              data-icon="copy"
+              disabled
+            ></button
+            ><span class="toolbar-divider"></span
+            ><button
+              class="icon-btn"
+              id="grid-btn"
+              aria-label="显示网格"
+              title="显示网格 G"
+              aria-pressed="true"
+              data-icon="grid"
+            ></button
+            ><button
+              class="icon-btn"
+              id="labels-btn"
+              aria-label="显示标注"
+              title="显示标注"
+              aria-pressed="true"
+              data-icon="tag"
+            ></button
+            ><button
+              class="icon-btn"
+              id="ghost-btn"
+              aria-label="透视下层"
+              title="透视下一个下层"
+              aria-pressed="false"
+              data-icon="ghost"
+            ></button>
+          </div>
+          <div class="toolbar-center" id="view-description"><i></i>俯视平面 <span>TOP VIEW</span></div>
+          <div class="toolbar-group zoom-controls">
+            <button class="icon-btn" id="zoom-out" title="缩小" aria-label="缩小" data-icon="minus"></button
+            ><button id="zoom-value" title="恢复 100%">100%</button
+            ><button class="icon-btn" id="zoom-in" title="放大" aria-label="放大" data-icon="plus"></button
+            ><span class="toolbar-divider"></span
+            ><button
+              class="icon-btn"
+              id="fit-btn"
+              title="适应画布 F"
+              aria-label="适应画布"
+              data-icon="maximize"
+            ></button>
+          </div>
+        </div>
+        <div class="circle-options" id="circle-options" role="group" aria-label="圆环参数" hidden>
+          <label for="circle-diameter"
+            >内径
+            <input id="circle-diameter" type="number" min="0" max="512" step="1" value="12" required />
+            格</label
+          >
+          <label for="circle-width"
+            >环宽
+            <input id="circle-width" type="number" min="1" max="512" step="1" value="1" required /> 格</label
+          >
+          <output id="circle-summary" for="circle-diameter circle-width" aria-live="polite"
+            >外径 14 格 · 向外绘制</output
+          >
+        </div>
+        <div class="maze-options" id="maze-options" role="group" aria-label="迷宫填充" hidden>
+          <div class="maze-controls">
+            <strong>迷宫填充</strong>
+            <label for="maze-width"
+              >通道宽度
+              <input id="maze-width" type="number" min="1" max="512" step="1" value="1" required /> 格</label
+            >
+            <button class="button" id="maze-start">选起点</button>
+            <button class="button" id="maze-end">选终点</button>
+            <button class="button" id="maze-shuffle">换一个</button>
+            <button class="button primary" id="maze-apply">生成迷宫</button>
+            <button class="button" id="maze-reset">重新选区</button>
+          </div>
+          <p id="maze-status" role="status" aria-live="polite">① 点击空白区域，自动选中连通区域</p>
+          <small>仅当前楼层 · 地板通道 / 墙壁 · 保留障碍 · 确认前不修改地图 · Esc 取消</small>
+        </div>
+        <div class="canvas-container" id="canvas-container">
+          <canvas
+            id="map-canvas"
+            tabindex="0"
+            role="img"
+            aria-label="要塞地图编辑网格，使用绘图工具逐格编辑；PageUp 和 PageDown 切换楼层"
+          ></canvas>
+          <div class="canvas-heading">
+            <span class="canvas-badge" id="canvas-z">Z −01</span><span id="canvas-layer-name">主厅与工坊</span
+            ><span class="canvas-heading-line"></span
+            ><small id="canvas-subtitle">192 × 192 格 · F 查看全图</small>
+          </div>
+          <div class="north-indicator">
+            <span>N</span
+            ><svg viewBox="0 0 24 32">
+              <path d="M12 3 20 26 12 21 4 26Z" fill="none" stroke="currentColor" />
+              <path d="M12 3v18l-8 5Z" fill="currentColor" />
+            </svg>
+          </div>
+          <div class="section-control" id="section-control" hidden>
+            <label for="section-column">剖切 X 列</label
+            ><input type="range" id="section-column" min="0" max="191" value="96" /><output
+              id="section-column-value"
+              >X 97</output
+            >
+          </div>
+          <div class="selection-actions" id="selection-actions" hidden>
+            <span id="selection-size"></span><button id="copy-selection">复制</button
+            ><button id="fill-selection">填入素材</button><button id="delete-selection">清空</button
+            ><button id="dismiss-selection" aria-label="取消选区">×</button>
+          </div>
+          <div class="canvas-hint" id="canvas-hint">
+            <kbd>拖动</kbd> 绘制 <span>·</span> <kbd>空格 + 拖动</kbd> 平移 <span>·</span>
+            <kbd>滚轮</kbd> 缩放
+          </div>
+          <div id="cross-indicator" class="cross-indicator" hidden>
+            <span data-icon="layers"></span><span id="cross-indicator-text"></span>
+          </div>
+        </div>
+        <div class="layer-tabs-bar">
+          <div id="layer-tabs" class="layer-tabs"></div>
+          <button
+            id="add-layer-tab"
+            class="icon-btn"
+            aria-label="添加楼层"
+            title="添加楼层"
+            data-icon="plus"
+          ></button>
+        </div>
+        <footer class="editor-status">
+          <div>
+            <span class="status-dot"></span><span id="tool-status">画笔</span
+            ><span class="status-separator">/</span><span id="hover-material">就绪</span>
+          </div>
+          <div class="coordinate-status">
+            <span id="coordinate">X — &nbsp; Y —</span><b id="status-z">Z −1</b>
+          </div>
+          <span id="cell-count">0 个已规划格</span>
+        </footer>
+      </section>
+      <button class="levels-backdrop" id="levels-backdrop" aria-label="关闭楼层面板" tabindex="-1"></button>
+      <aside class="right-panel" id="right-panel">
+        <section class="levels-section">
+          <div class="panel-title">
+            Z 轴楼层
+            <div class="panel-title-actions">
+              <span id="level-count" class="count-badge">5</span
+              ><button
+                class="icon-btn small"
+                id="add-layer"
+                title="添加楼层"
+                aria-label="添加楼层"
+                data-icon="plus"
+              ></button>
+            </div>
+          </div>
+          <div class="level-caption"><span>地表</span><span>高程 / ELEVATION</span></div>
+          <div class="levels-list" id="levels-list"></div>
+          <div class="layer-manage">
+            <button id="rename-layer" title="重命名当前楼层"><span data-icon="edit"></span>重命名</button
+            ><button id="duplicate-layer" title="复制当前楼层"><span data-icon="copy"></span>复制</button
+            ><button id="delete-layer" title="删除当前楼层" aria-label="删除当前楼层">
+              <span data-icon="trash"></span>
+            </button>
+          </div>
+        </section>
+        <section class="cross-section">
+          <div class="panel-title">
+            <label for="cross-toggle">跨层编辑</label
+            ><label class="switch"><input id="cross-toggle" type="checkbox" /><span></span></label>
+          </div>
+          <p class="section-description">将同一笔规划同步到多个 Z 层。</p>
+          <div class="range-controls">
+            <label>起始楼层<select id="range-from" aria-label="起始楼层"></select></label><span>→</span
+            ><label>结束楼层<select id="range-to" aria-label="结束楼层"></select></label>
+          </div>
+          <div class="range-summary" id="range-summary">仅编辑当前楼层</div>
+          <button class="button stair-button" id="stairs-btn">
+            <span data-icon="stairs"></span>连接垂直楼梯<span data-icon="arrow-up-right"></span>
+          </button>
+          <p class="stair-hint">选好起止层，在地图上点击放置。</p>
+        </section>
+        <section class="overview-section">
+          <div class="panel-title">地图概览<span class="eyebrow" id="overview-scale">192 × 192</span></div>
+          <canvas id="minimap" width="400" height="240" aria-label="地图缩略图，点击定位" role="img"></canvas>
+          <div class="overview-footer">
+            <span><i></i>已规划区域</span><span id="planned-percent">0%</span>
+          </div>
+        </section>
+        <section class="legend-section">
+          <div class="panel-title">地图图例</div>
+          <div class="legend-grid">
+            <span><i style="--legend: #e4e9dd"></i>地板</span
+            ><span><i style="--legend: #768477"></i>墙壁</span
+            ><span><i style="--legend: #c7dfe8"></i>水域</span
+            ><span><i style="--legend: #eddaa4"></i>楼梯</span
+            ><span><i style="--legend: #ecd2bc"></i>工坊</span
+            ><span><i style="--legend: #d7ddc2"></i>储物区</span>
+          </div>
+          <div id="custom-legend" class="custom-legend" aria-label="当前楼层自定义素材图例"></div>
+        </section>
+        <div class="right-footer"><span class="tiny-logo">▥</span> STRIKE THE EARTH.<span>v1.0</span></div>
+      </aside>
+    </main>
+    <input type="file" id="import-file" accept="application/json,.json" hidden />
+    <dialog id="dialog">
+      <form id="dialog-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <span class="eyebrow">FORTRESS BLUEPRINT</span>
+            <h2 id="dialog-title"></h2>
+          </div>
+          <button
+            type="button"
+            id="close-dialog"
+            class="icon-btn"
+            aria-label="关闭对话框"
+            data-icon="close"
+          ></button>
+        </div>
+        <div id="dialog-content"></div>
+        <div class="dialog-actions" id="dialog-actions">
+          <button type="button" id="cancel-dialog" class="button">取消</button
+          ><button type="submit" id="confirm-dialog" class="button primary">确认</button>
+        </div>
+      </form>
+    </dialog>
+    <output
+      id="drawing-size"
+      class="drawing-size"
+      aria-label="绘制区域尺寸（宽*高，单位：格）"
+      aria-live="off"
+      hidden
+    ></output>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
