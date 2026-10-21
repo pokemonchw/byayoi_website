@@ -39,7 +39,7 @@
   function generateMaze(region, start, end, pathWidth = 1, seed = 1) {
     const { width: w, height: h, mask, bounds } = region,
       n = w * h;
-    if (!Number.isInteger(pathWidth) || pathWidth < 1 || pathWidth > M.MAX_SIZE)
+    if (!Number.isInteger(pathWidth) || pathWidth < 1 || pathWidth > M.MAX_TOOL_SIZE)
       throw new Error('通道宽度必须是 1–512 之间的整数。');
     for (const point of [start, end])
       if (!point || !M.inside(region, point.x, point.y) || !mask[point.y * w + point.x])

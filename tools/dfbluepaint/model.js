@@ -3,7 +3,13 @@
   'use strict';
   const DEFAULT_SIZE = 192;
   const MIN_SIZE = 8;
-  const MAX_SIZE = 512;
+  const MAX_SIZE = 32767;
+  const MAX_TOOL_SIZE = 512;
+  // 游戏导出保留完整的已知楼层和原始 int16 Z 坐标。
+  const MAX_LAYERS = 32768;
+  const MIN_Z = -32768;
+  const MAX_Z = 32767;
+  const MAX_IMPORT_BYTES = 256 * 1024 * 1024;
   const CUSTOM_GROUPS = ['建筑', '设施', '区域', '功能', '地形'];
   const MAX_CUSTOM_TILES = 128;
   const DEFAULT_SETTINGS = Object.freeze({
@@ -276,10 +282,10 @@
     return [...line(x0, y0, cx, cy), ...line(cx, cy, x1, y1).slice(1)];
   }
   function circle(cx, cy, diameter, width, cols, rows) {
-    if (!Number.isInteger(diameter) || diameter < 0 || diameter > MAX_SIZE)
-      throw new Error(`圆环内径必须是 0–${MAX_SIZE} 之间的整数。`);
-    if (!Number.isInteger(width) || width < 1 || width > MAX_SIZE)
-      throw new Error(`圆环宽度必须是 1–${MAX_SIZE} 之间的整数。`);
+    if (!Number.isInteger(diameter) || diameter < 0 || diameter > MAX_TOOL_SIZE)
+      throw new Error(`圆环内径必须是 0–${MAX_TOOL_SIZE} 之间的整数。`);
+    if (!Number.isInteger(width) || width < 1 || width > MAX_TOOL_SIZE)
+      throw new Error(`圆环宽度必须是 1–${MAX_TOOL_SIZE} 之间的整数。`);
     if (
       ![cx, cy, cols, rows].every(Number.isInteger) ||
       cols < 1 ||
@@ -415,11 +421,60 @@
       }
     return buildings;
   }
+  // cellsRle 为按行排列的 [素材 ID, 连续格数, ...]，兼容原有 cells 数组。
+  function readLayerCells(layer, count, tileIds) {
+    if (layer.cells !== undefined) {
+      if (
+        layer.cellsRle !== undefined ||
+        !Array.isArray(layer.cells) ||
+        layer.cells.length !== count ||
+        layer.cells.some((cell) => !Number.isInteger(cell) || !tileIds.has(cell))
+      )
+        throw new Error('地图格子数据无效。');
+      return layer.cells.slice();
+    }
+    const runs = layer.cellsRle;
+    if (!Array.isArray(runs) || !runs.length || runs.length % 2 || runs.length > count * 2)
+      throw new Error('地图压缩格子数据无效。');
+    let total = 0;
+    for (let i = 0; i < runs.length; i += 2) {
+      const tile = runs[i],
+        length = runs[i + 1];
+      if (!Number.isInteger(tile) || !tileIds.has(tile) || !Number.isInteger(length) || length <= 0)
+        throw new Error('地图压缩格子数据无效。');
+      total += length;
+      if (total > count) throw new Error('地图压缩格子数量超出尺寸。');
+    }
+    if (total !== count) throw new Error('地图压缩格子数量与尺寸不符。');
+    const cells = Array(count);
+    let offset = 0;
+    for (let i = 0; i < runs.length; i += 2) {
+      cells.fill(runs[i], offset, offset + runs[i + 1]);
+      offset += runs[i + 1];
+    }
+    return cells;
+  }
+  // 保存、撤销和导出共用无损编码，避免整张地图的重复格子占满文件与本地缓存。
+  function serializeProject(project) {
+    const layers = project.layers.map((layer) => {
+      const { cells, ...fields } = layer,
+        runs = [];
+      for (let start = 0; start < cells.length; ) {
+        let end = start + 1;
+        while (end < cells.length && cells[end] === cells[start]) end++;
+        runs.push(cells[start], end - start);
+        if (runs.length >= cells.length) return layer;
+        start = end;
+      }
+      return { ...fields, cellsRle: runs };
+    });
+    return JSON.stringify({ ...project, layers });
+  }
   function validateProject(raw) {
     if (!raw || raw.version !== 1) throw new Error('不支持的地图文件版本。');
     validateSize(raw.width, raw.height);
-    if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > 24)
-      throw new Error('地图需包含 1–24 个楼层。');
+    if (!Array.isArray(raw.layers) || raw.layers.length < 1 || raw.layers.length > MAX_LAYERS)
+      throw new Error(`地图需包含 1–${MAX_LAYERS} 个楼层。`);
     if (
       raw.customTiles !== undefined &&
       (!Array.isArray(raw.customTiles) || raw.customTiles.length > MAX_CUSTOM_TILES)
@@ -438,15 +493,10 @@
     const tileIds = new Set([...TILES, ...customTiles].map((t) => t.id));
     const zs = new Set();
     const layers = raw.layers.map((l) => {
-      if (!l || !Number.isInteger(l.z) || Math.abs(l.z) > 100 || zs.has(l.z))
+      if (!l || !Number.isInteger(l.z) || l.z < MIN_Z || l.z > MAX_Z || zs.has(l.z))
         throw new Error('Z 坐标无效或重复。');
       zs.add(l.z);
-      if (
-        !Array.isArray(l.cells) ||
-        l.cells.length !== raw.width * raw.height ||
-        l.cells.some((c) => !Number.isInteger(c) || !tileIds.has(c))
-      )
-        throw new Error('地图格子数据无效。');
+      const cells = readLayerCells(l, raw.width * raw.height, tileIds);
       if (l.labels !== undefined && (!Array.isArray(l.labels) || l.labels.length > 500))
         throw new Error('标注数据无效。');
       const labels = (l.labels || []).map((a) => {
@@ -461,20 +511,20 @@
       const geometry = { width: raw.width, height: raw.height, customTiles };
       const buildings =
         l.buildings === undefined
-          ? migrateBuildings(geometry, l)
+          ? migrateBuildings(geometry, { ...l, cells })
           : l.buildings.map((b) => validateBuilding(geometry, b));
       const occupied = new Set();
       for (const b of buildings)
         for (const [x, y] of buildingPoints(b)) {
           const index = y * raw.width + x;
-          if (occupied.has(index) || l.cells[index] !== b.tile)
+          if (occupied.has(index) || cells[index] !== b.tile)
             throw new Error('建筑占地重叠或与地图格子不一致。');
           occupied.add(index);
         }
       return {
         z: l.z,
         name: String(l.name || `楼层 ${l.z}`).slice(0, 40),
-        cells: l.cells.slice(),
+        cells,
         labels,
         buildings,
       };
@@ -631,8 +681,14 @@
     DEFAULT_SIZE,
     MIN_SIZE,
     MAX_SIZE,
+    MAX_TOOL_SIZE,
+    MAX_LAYERS,
+    MIN_Z,
+    MAX_Z,
+    MAX_IMPORT_BYTES,
     TILES,
     createProject,
+    serializeProject,
     validateSize,
     cropImpact,
     resizeProject,

@@ -332,7 +332,7 @@
       return;
     }
     try {
-      localStorage.setItem(STORAGE, JSON.stringify(p));
+      localStorage.setItem(STORAGE, M.serializeProject(p));
       $('#save-status').textContent = '已自动保存到本地';
     } catch (e) {
       $('#save-status').textContent = '存储已满，请导出备份';
@@ -349,7 +349,7 @@
     if (storageAvailable) saveNow();
   });
   function snapshot() {
-    return JSON.stringify(p);
+    return M.serializeProject(p);
   }
   function commit(before) {
     if (before === snapshot()) return false;
@@ -1351,7 +1351,7 @@
     canvas.style.cursor = state.tool === 'hand' || state.space ? 'grab' : 'crosshair';
     if (d.pan) return;
     if (cancel) {
-      p = JSON.parse(d.before);
+      p = M.validateProject(JSON.parse(d.before));
       refresh();
       save();
       return;
@@ -1850,14 +1850,14 @@
     )
   );
   function addLayer(copy = false) {
-    if (p.layers.length >= 24) {
-      toast('最多支持 24 个楼层。', true);
+    if (p.layers.length >= M.MAX_LAYERS) {
+      toast(`最多支持 ${M.MAX_LAYERS} 个楼层。`, true);
       return;
     }
-    const next = Math.max(-100, Math.min(...p.layers.map((l) => l.z)) - 1);
+    const next = Math.max(M.MIN_Z, Math.min(...p.layers.map((l) => l.z)) - 1);
     openDialog(
       copy ? '复制当前楼层' : '拓展新的楼层',
-      `<p>${copy ? '把当前楼层的格子与标注复制到一个新的 Z 层。' : '向地下延伸，或者在地表之上继续建造。'}</p><div class="dialog-row"><div><label for="layer-z">Z 轴高程</label><input id="layer-z" type="number" min="-100" max="100" step="1" value="${next}" required></div><div><label for="layer-name">楼层名称</label><input id="layer-name" type="text" maxlength="40" value="${copy ? escapeHTML(currentLayer().name) + ' 副本' : '新楼层'}" required></div></div><p class="dialog-note">正数位于地表之上，负数位于地下。Z 坐标不可重复。</p>`,
+      `<p>${copy ? '把当前楼层的格子与标注复制到一个新的 Z 层。' : '向地下延伸，或者在地表之上继续建造。'}</p><div class="dialog-row"><div><label for="layer-z">Z 轴高程</label><input id="layer-z" type="number" min="${M.MIN_Z}" max="${M.MAX_Z}" step="1" value="${next}" required></div><div><label for="layer-name">楼层名称</label><input id="layer-name" type="text" maxlength="40" value="${copy ? escapeHTML(currentLayer().name) + ' 副本' : '新楼层'}" required></div></div><p class="dialog-note">手绘规划可用地表为 Z=0；游戏导入保留原始 Z 坐标。Z 坐标不可重复。</p>`,
       () => {
         const z = Number($('#layer-z').value),
           name = $('#layer-name').value.trim();
@@ -2046,7 +2046,7 @@
   }
   function exportJSON() {
     download(
-      new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }),
+      new Blob([M.serializeProject(p)], { type: 'application/json' }),
       `${safeName()}.dfplan.json`
     );
     toast('已导出全部楼层、自定义素材与设置。');
@@ -2056,7 +2056,7 @@
     const c = document.createElement('canvas'),
       margin = 38,
       header = 70,
-      size = Math.min(22, Math.floor((4096 - margin - header) / Math.max(p.width, p.height)));
+      size = Math.min(22, (4096 - margin * 2) / p.width, (4096 - margin - header) / p.height);
     c.width = p.width * size + margin * 2;
     c.height = p.height * size + margin + header;
     const x = c.getContext('2d');
@@ -2148,7 +2148,7 @@
     e.target.value = '';
     if (!file) return;
     try {
-      if (file.size > 96 * 1024 * 1024) throw new Error('文件过大，请选择小于 96 MB 的蓝图 JSON。');
+      if (file.size > M.MAX_IMPORT_BYTES) throw new Error('文件过大，请选择不超过 256 MB 的蓝图 JSON。');
       const next = M.validateProject(JSON.parse(await file.text()));
       openDialog(
         '导入要塞蓝图？',
