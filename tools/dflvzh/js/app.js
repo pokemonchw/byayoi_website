@@ -13,7 +13,7 @@
   const scalar = value => Array.isArray(value) ? scalar(value[0]) : value;
   const numeric = value => value === undefined || value === null || value === '' || typeof value === 'object' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
   const storage = {get(key) {try{return localStorage.getItem('atlas.'+key);}catch{return null;}},set(key,value) {try{localStorage.setItem('atlas.'+key,value);return true;}catch{return false;}}};
-  const singular = {figures:'figure',sites:'site',entities:'entity',artifacts:'artifact',regions:'region',eras:'era',collections:'event',events:'event',landmasses:'region',undergroundregions:'region',mountainpeaks:'region',rivers:'region'};
+  const singular = {figures:'figure',sites:'site',entities:'entity',artifacts:'artifact',regions:'region',eras:'era',collections:'event',events:'event',landmasses:'region',undergroundregions:'region',mountainpeaks:'region',rivers:'river'};
   const state = {world:null,route:'explore',recordId:null,lang:'zh',indexes:{},names:new Map(),graphs:[],rules:[],excludedEventTypes:new Set(),eventIndex:new Map(),collectionIndex:new Map(),favorites:new Set(),files:[],importing:false,bookmarks:[],tables:new Map(),tableSources:new Map(),map:null,charts:[],recordsView:null,query:'',filter:'',minYear:'',maxYear:'',expandedGroups:new Set()};
   let databasePromise,toastTimer,renderGeneration=0,searchGeneration=0,filterTimer,filterController,expandedGraph,importController,detailController,worldGeneration=0;
   const pause=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -56,10 +56,29 @@
     if(/^Artifact #\d+$/i.test(original))return '无名神器 #'+record.id;
     const unnamed=original.match(/^(Site|Region|Era|Event) #(\d+)$/i);
     if(unnamed&&!(record.raw?.name||record.translated_name))return ({site:'无名地点',region:'无名区域',era:'未命名时代',event:'未命名事件'})[unnamed[1].toLowerCase()]+' #'+record.id;
-    const source=record.translated_name || record.name || original;
+    const source=record.translated_name || record.name || original,raw=record.raw||record;
     const context={kind:singular[kind]||kind,type:record.type,entityType:record.type,siteType:kind==='sites'?record.type:undefined,rawName:original};let cacheable=true;
+    for(const [field,alias,format] of [['nameType','name_type','number'],['firstName','first_name','text'],['nickname','nickname','text'],['hasName','has_name','boolean'],['entityTypeId','entity_type_id','number'],['siteTypeId','site_type_id','number'],['governingRole','governing_role','boolean'],['riverTerrain','river_terrain','text'],['riverStyle','river_style','text']]){
+      const value=scalar(record[field]??record[alias]??raw[field]??raw[alias]);
+      if(value===undefined||value===null)continue;
+      if(format==='number'){const number=numeric(value);if(Number.isInteger(number))context[field]=number;}
+      else if(format==='boolean'){
+        if(typeof value==='boolean')context[field]=value;
+        else if(/^(?:true|false|1|0)$/i.test(String(value).trim()))context[field]=/^(?:true|1)$/i.test(String(value).trim());
+      }else if(typeof value==='string')context[field]=value;
+    }
+    // Native WORD/POS slots are authoritative when an export includes them.
+    // Legends text alone does not identify the seven slots unambiguously.
+    const words=record.words??raw.words;
+    if(Array.isArray(words)&&words.length===7)context.words=words;
+    if(kind==='rivers'){
+      // normalizeGeography supplies a generic display type, so read the
+      // original classification instead of treating its default as river size.
+      const size=String(record.riverSize??raw.riverSize??record.river_size??raw.river_size??raw.type??'').trim().replace(/_/g,' ').replace(/\s+/g,' ').toLowerCase();
+      if(['brook','stream','minor river','river','major river'].includes(size))context.riverSize=size;
+    }
     if(kind==='figures')context.givenName=original.split(/\s+/)[0];
-    if(kind==='entities'&&/^(?:sitegovernment|site government|government)$/i.test(String(record.type||''))) {
+    if(kind==='entities'&&(/^(?:sitegovernment|site government|government)$/i.test(String(record.type||''))||context.entityTypeId===1||context.governingRole===true&&context.entityTypeId>=1&&context.entityTypeId<=10)) {
       const links=record.entity_link||[];
       const parents=[...new Set((Array.isArray(links)?links:[links]).filter(link=>link&&/^parent$/i.test(String(link.type||link.link_type||''))).map(link=>Number(link.target??link.entity_id)).filter(id=>Number.isFinite(id)&&id>=0))];
       // Only an explicit, unambiguous parent link supplies a civilization HEAD.
@@ -70,7 +89,7 @@
         if(head){context.parentHead=head.head;context.parentPlural=head.plural;}
       }
     }
-    const key=kind+':'+record.id+':'+original+':'+(context.parentHead||'')+':'+(context.parentPlural||'');
+    const key=JSON.stringify([kind,record.id,source,context]);
     if(cacheable&&state.names.has(key))return state.names.get(key);
     const translated=window.DFTranslate?.name(String(source),context) || String(source);
     if(cacheable)state.names.set(key,translated);if(state.names.size>10000)state.names.delete(state.names.keys().next().value);return translated;

@@ -472,23 +472,29 @@
     if(!pattern.link&&!rule.ending&&!['verb_object','subject_verb','prefix'].includes(rule.relation))score-=fragments*3+(fragments===2?2:0);
     return score;
   }
-  const patterns=[['11','',1,1,1],['12','',1,2,2],['21','',2,1,4],['22','',2,2,8],['11z','之',1,1,16],['12z','之',1,2,32],['21z','之',2,1,64]].map(([form,link,a,b,bit])=>({form,link,a,b,bit}));
+  const patterns=[['11','',1,1,1],['22','',2,2,8],['11z','之',1,1,16],['22z','之',2,2,128]].map(([form,link,a,b,bit])=>({form,link,a,b,bit}));
   function composed(head,l,r,text,english,score) {
     const p={...head,english,known:l.known&&r.known,complete:l.complete&&r.complete,roots:l.roots+r.roots,rootLeft:l.english,rootRight:r.english,order:l.order+'\n'+r.order};
     finish(p,text,score);p.source=p.sourceFull=p.core=p.modifier=p.head=p.agent=text;p.compact=width(text)===1?text:'';p.balanced=width(text)===2?text:'';p.sourceAction=p.action=has(p,A)?text:'';p.erIdentity='';return p;
   }
-  function surnameCombine(left,right,entity=false) {
+  function surnameCombine(left,right,entity=false,policy='FullSurname') {
     let best=original(left.english+right.english),bestPreference=0,bestWidth=0;
     const ae=surnames.get(left.sense),be=surnames.get(right.sense);
     const fallback=()=>{
+      // Preserve the existing untyped personal-name fallback. Typed callers
+      // accept only composition evidence, never this concatenation of glosses.
       if(entity)return original(left.english+right.english);
       return Object.assign(finish(original(left.english+right.english),(ae?ae.full:left.full)+(be?be.full:right.full),-100000000),{known:left.complete&&right.complete,complete:left.complete&&right.complete,roots:left.roots+right.roots,rootLeft:left.english,rootRight:right.english,order:left.order+'\n'+right.order});
     };
     if(!ae||!be||entity&&(left.roots>1||right.roots>1))return fallback();
-    const actor=!entity&&!!(actorLicensed(left)||actorLicensed(right));
+    const fixedRelation=policy==='Title22z'||policy==='AdjectiveHeadDouble';
+    const actor=!entity&&!fixedRelation&&!!(actorLicensed(left)||actorLicensed(right));
     const compose=(a,b,reversed)=>{
       const aE=surnames.get(a.sense),bE=surnames.get(b.sense);
       for(const aClass of classes.get(aE.type).ancestry)for(const bClass of classes.get(bE.type).ancestry)for(const rule of rules.get(aClass+'\t'+bClass)||[]){
+        if(policy==='Title22z'&&(rule.relation!=='genitive'||rule.ending||!rule.forms.includes('22z')))continue;
+        if(policy==='TitleHead11'&&rule.ending)continue;
+        if(policy==='AdjectiveHeadDouble'&&!['property','material'].includes(rule.relation))continue;
         if(reversed&&rule.direction!=='either'||!has(a,rule.leftKinds)||!has(b,rule.rightKinds)||!includes(rule.leftTraits,aE.traits)||!includes(rule.rightTraits,bE.traits))continue;
         if(entity&&(rule.ending||rule.relation==='agent')||actor!==(rule.relation==='agent'))continue;
         if(rule.relation==='agent'&&(reversed||rule.ending!=='者'||has(a,G)&&!aE.identity||has(b,G)&&!bE.identity))continue;
@@ -496,6 +502,7 @@
         if(rule.relation==='property'&&(has(a,T)||has(b,T))){const state=has(a,T)?aE:bE,head=has(a,T)?bE:aE,allowed=labels(state.valency).includes('transitive')?state.objects:state.subjects;if(!classes.get(head.type).ancestry.some(t=>allowed.includes(t)))continue;}
         const first=contextWords(a,b,rule.context,rule.leftRole),second=contextWords(b,a,rule.context,rule.rightRole);
         for(const pattern of patterns){
+          if(policy==='Title22z'&&pattern.form!=='22z'||policy==='TitleHead11'&&pattern.form!=='11'||policy==='AdjectiveHeadDouble'&&pattern.b!==2)continue;
           if(!rule.forms.includes(pattern.form)||entity&&(pattern.link||pattern.a!==pattern.b))continue;
           for(const x of first)for(const y of second){
             if(rule.relation==='coordinate'&&(x.use==='restricted'||y.use==='restricted'))continue;
@@ -517,13 +524,14 @@
             const w=width(text);
             if(best.known&&(score<best.score||score===best.score&&(preference<bestPreference||preference===bestPreference&&(w>bestWidth||w===bestWidth&&text>=best.text))))continue;
             best=Object.assign(finish({...b},text,score),{known:left.complete&&right.complete,complete:left.complete&&right.complete,roots:left.roots+right.roots,english:left.english+right.english,rootLeft:left.english,rootRight:right.english,order:left.order+'\n'+right.order});
+            best.composition={text,leftWord:x.text,rightWord:y.text,leftSense:a.sense,rightSense:b.sense,reversed,pattern:pattern.form};
             bestPreference=preference;bestWidth=w;
             if(entity){const formatted=composed(best,left,right,text,best.english,score);best={...formatted,order:best.order};}else best.sense='';
           }
         }
       }
     };
-    compose(left,right,false);if(!actor)compose(right,left,true);
+    compose(left,right,false);if(!actor&&!fixedRelation)compose(right,left,true);
     return best.known?best:fallback();
   }
   function surname(s) {
@@ -629,7 +637,12 @@
   function entityName(source,slots) {
     if(slots){const present=i=>!!String(slots[i]?.english||'').trim(),part=i=>entityParts(slots[i].english,slots[i].pos??-1);let front=[],title=[];
       if(present(0)||present(1)){front=part(present(0)?0:1);if(present(0)&&present(1))front=phraseJoin(front,part(1));if(!front.length)return null;}
-      for(let i=5;i>=2;i--)if(present(i)){const p=part(i);if(!p.length)return null;title=title.length?phraseJoin(p,title):p;if(!title.length)return null;}
+      const paired=present(2)&&present(3)&&slots[2].pos===2&&slots[3].pos===2;
+      for(let i=5;i>=2;i--)if(present(i)&&!(paired&&i===2)){
+        let p=part(i);if(!p.length)return null;
+        if(paired&&i===3){const coordinated=[];for(const a of part(2))for(const b of p)appendEntity(coordinated,composed(b,a,b,a.text+'与'+b.text,a.english+' '+b.english,a.score+b.score));p=coordinated;if(!p.length)return null;}
+        title=title.length?phraseJoin(p,title):p;if(!title.length)return null;
+      }
       const tail=present(6)?part(6):[];if(present(6)&&!tail.length)return null;return entityResult(entityGroups(front,title,tail));
     }
     let s=String(source).trim();if(!s||nextQuote(s,0))return null;if(words.has(key(s)))return entityResult(entityParts(s));
@@ -709,6 +722,202 @@
   for(const [id,forms]of Object.entries(D.englishForms))forms.forEach((form,pos)=>{if(form){const k=key(form);if(!formsIndex.has(k))formsIndex.set(k,[]);formsIndex.get(k).push({id,pos,english:form});}});
   const senseIndex=new Map(D.senses.map(r=>[r[0]+'\t'+r[1],r[3]]));
   const posPart=pos=>pos<=1?'NOUN':pos===2?'ADJ':pos===3?'PREFIX':'VERB';
+  const nativeBindings=new Map(),adjectiveSurfaces=new Map();
+  for(const row of D.nativeSenses||[]){
+    const [word,pos,sense,surface,suffix]=row.map(S),binding=word+'\t'+pos;
+    if(!nativeBindings.has(binding))nativeBindings.set(binding,new Set());
+    nativeBindings.get(binding).add(sense);
+    if(surface)adjectiveSurfaces.set(sense,suffix&&surface.endsWith(suffix)?surface.slice(0,-suffix.length):surface);
+  }
+  function resolveNativeSenses(word) {
+    if(!word?.id||word.pos<0||word.pos>8)return[];
+    const pos=word.pos,mask=pos<=1?O|G:pos===2?Q|T:pos===3?P:A|T;
+    const binding=nativeBindings.get(word.id+'\t'+posPart(pos)),gloss=senseIndex.get(word.id+'\t'+posPart(pos));
+    let out=[],rank=-1;
+    for(const p of surnameVariants(word.english,true)){
+      if(!has(p,mask)||!p.sense)continue;
+      const entry=surnames.get(p.sense);if(!entry)continue;
+      const bound=binding?binding.has(p.sense):gloss&&(p.source===gloss||entry.full===gloss||pos>=4&&(p.sourceAction===gloss||entry.action===gloss));
+      if(!bound)continue;
+      const specificity=pos===7&&has(p,T)&&p.state==='result'?2:pos===8&&p.state==='process'?2:pos>=4&&pos<=6&&has(p,A)?1:0;
+      if(specificity<rank)continue;if(specificity>rank){out=[];rank=specificity;}
+      out.push({...p,nativePos:pos});
+    }
+    return out;
+  }
+  function typedCompose(left,right,policy='FullSurname') {
+    let best=original('');
+    for(const a of left)for(const b of right){const p=surnameCombine(a,b,false,policy);if(p.composition&&(!best.composition||better(p,best)))best=p;}
+    return best.composition||null;
+  }
+  function adjectiveSurface(senses,ordinary) {
+    let result='';
+    for(const sense of senses){
+      if(sense.nativePos!==2)continue;
+      const surface=adjectiveSurfaces.get(sense.sense)||ordinary;if(!surface)continue;
+      if(result&&result!==surface)return null;result=surface;
+    }
+    return result||null;
+  }
+  function siteSuffix(context) {
+    if(context.type===false||context.appendSuffix===false)return'';
+    const type=key(context.siteType||context.type||'');
+    return type==='player fortress'?'堡':siteSuffixes[type]||(context.siteTypeId===5?'聚落':'地点');
+  }
+  function riverSuffix(context) {
+    if(context.appendSuffix===false)return'';
+    const size=key(context.riverSize||'unknown'),terrain=key(context.riverTerrain||'unknown'),style=key(context.riverStyle||'neutral');
+    let best=null;
+    for(const row of D.riverGenerics||[]){
+      if(key(row[0])!==size||row[1]!=='*'&&key(row[1])!==terrain||row[2]!=='*'&&key(row[2])!==style)continue;
+      if(!best||row[4]>best[4])best=row;
+    }
+    return best?(best[3]==='-'?'':best[3]):'河';
+  }
+  const isGovernment=context=>['sitegovernment','site government','government'].includes(key(context.entityType))||context.entityTypeId===1||context.governingRole===true&&context.entityTypeId>=1&&context.entityTypeId<=10;
+  function structuredName(source,context,site) {
+    let text=String(source).trim();if(text.startsWith('"')&&text.endsWith('"'))text=text.slice(1,-1).trim();
+    const suffix=site?(isGovernment(context)?governmentSuffix(context):siteSuffix(context)):riverSuffix(context);
+    // English text cannot prove native WORD/POS boundaries or identities.
+    if(context.words&&(!site||key(reconstructName(context.words))===key(text))){
+      const rendered=nativeGrammar(context.words,{...context,suffix},site);if(rendered)return{text:rendered,method:'dfcn-native-slots'};
+    }
+    return{text:text+suffix,method:'dfcn-missing-slots'};
+  }
+  // Port of DFCN river_name_composition.inc and RiverNames::Result::display.
+  // The caller supplies native WORD/POS identities and owns missing-input fallback.
+  function nativeGrammar(inputSlots, context={}, site=false) {
+    if (!Array.isArray(inputSlots)||context.hasName===false) return null;
+    const slots=Array.from({length:7},(_,i)=>inputSlots[i]||{});
+    const present=i=>!!slots[i].id;
+    if (site&&!present(2)&&!present(3)&&!present(5)) slots[4]={};
+    const kind=site?'SiteSlots':context.inputKind||'NativeSlots';
+    if(!site&&!['NativeSlots','AdjectiveName','ModifiedFront'].includes(kind))return null;
+    const hasFront=present(0)&&present(1),hasFrontWord=present(0)||present(1);
+    const hasNominal=present(5)||(site&&present(4));
+    const hasAdjective=present(2)||present(3);
+    if (context.firstName||context.first_name||context.nickname||
+        (!site&&(present(0)!==present(1)||(present(3)&&!present(2))))||
+        (kind==='NativeSlots'&&((context.nameType??20)!==20||
+          (!hasNominal&&(present(2)||present(3)||present(4)||present(6)))||
+          (hasNominal&&!present(2)&&!present(6))))||
+        (kind==='AdjectiveName'&&(hasFront||hasNominal||!present(2)||present(4)||present(6)))||
+        (kind==='ModifiedFront'&&(!hasFront||hasNominal||!present(2)||present(4)||present(6)))) return null;
+    const allowed=[0x09f,0x0f7,0x004,0x004,0x00f,0x003,0x103];
+    const meanings=Array(7).fill(''),senses=Array.from({length:7},()=>[]);
+    for(let i=0;i<7;i++) if(present(i)) {
+      const w=slots[i];
+      if(w.has_form===false||!w.english||!Number.isInteger(w.pos)||w.pos<0||w.pos>8||
+          (!site&&!(allowed[i]&(1<<w.pos)))) return null;
+      meanings[i]=senseIndex.get(w.id+'\t'+posPart(w.pos))||'';
+      senses[i]=resolveNativeSenses(w);
+    }
+    const source=i=>slots[i].english;
+    const generic=context.suffix??(site?siteSuffix(context):riverSuffix(context));
+    let front='',head='',modifiers='',siteComplement='',title=null,unresolvedTitle='';
+    let lastSelection=null;
+    const nominalHead=present(5)?5:4,nominalCompound=present(4)&&present(5);
+    const compound=(left,right,policy='FullSurname')=>{
+      lastSelection=typedCompose(senses[left],senses[right],policy);
+      if(lastSelection) return lastSelection.text;
+      const a=slots[left],b=slots[right],tokenWord=s=>/^[a-z']+$/i.test(s);
+      if(!tokenWord(a.english)||!tokenWord(b.english))
+        return englishPhonetic(a.english,[a])+englishPhonetic(b.english,[b]);
+      return englishPhonetic(a.english+b.english,[a,b])||a.english+b.english;
+    };
+    const adjectiveGroup=()=>[2,3].filter(present).map(i=>{
+      if(site&&slots[i].pos!==2) return meanings[i]||source(i);
+      return adjectiveSurface(senses[i],meanings[i])||(site&&meanings[i])||source(i);
+    }).join('与');
+    const independentAdjectives=()=>{
+      if(!present(2)||!present(3)) return adjectiveGroup();
+      lastSelection=typedCompose(senses[2],senses[3],'FullSurname');
+      return lastSelection?lastSelection.text:adjectiveGroup();
+    };
+    const display=()=>{
+      const adjective=modifiers?modifiers+'的':'';
+      if(site) {
+        const ownership=present(6)?siteComplement+'之':'';
+        if(front) {
+          const namedSite=adjective+front+generic;
+          return head?namedSite+'.'+ownership+head:ownership+namedSite;
+        }
+        return head?ownership+adjective+head+generic:null;
+      }
+      const titleOnly=!hasFront&&!hasFrontWord&&!hasAdjective;
+      if(title) {
+        if(titleOnly) return generic?title.complement+title.head+'之'+generic:
+          title.complement+'之'+title.head;
+        return adjective+front+generic+'.'+title.complement+'之'+title.head;
+      }
+      if(unresolvedTitle) return titleOnly?unresolvedTitle+' '+generic:
+        adjective+front+generic+'.'+unresolvedTitle;
+      if(front) return adjective+front+generic+(head?'.'+head:'');
+      return head?adjective+head+generic:null;
+    };
+    if(hasFront) front=compound(0,1);
+    else if(site&&hasFrontWord) {const i=present(0)?0:1;front=meanings[i]||source(i);}
+    if(site&&present(6)) {
+      if(!hasFrontWord&&!hasNominal&&!hasAdjective) return null;
+      const adjectiveOnly=!hasFrontWord&&!hasNominal;
+      const contextSlot=hasNominal?nominalHead:hasFrontWord?(present(1)?1:0):(present(3)?3:2);
+      let headSenses=senses[contextSlot];
+      const compoundHead=hasNominal?nominalCompound:hasFrontWord?hasFront:present(2)&&present(3);
+      if(hasNominal) head=compoundHead?compound(4,5):meanings[contextSlot]||source(contextSlot);
+      else if(adjectiveOnly) head=independentAdjectives();
+      if(!adjectiveOnly) modifiers=adjectiveGroup();
+      if(compoundHead&&lastSelection) {
+        const nativeHead=lastSelection.reversed?lastSelection.leftSense:lastSelection.rightSense;
+        headSenses=headSenses.filter(s=>s.sense===nativeHead);
+      }
+      const selected=typedCompose(senses[6],headSenses,'Title22z');
+      siteComplement=selected?selected.leftWord:meanings[6]||source(6);
+      if(selected&&!compoundHead&&!adjectiveOnly) {
+        if(hasNominal) head=selected.rightWord;
+        else front=selected.rightWord;
+      }
+      return display();
+    }
+    if(kind==='AdjectiveName'||(site&&!hasFrontWord&&!hasNominal&&hasAdjective)) {
+      head=independentAdjectives();
+      return display();
+    }
+    if(kind==='ModifiedFront'||(site&&hasFrontWord&&!hasNominal&&hasAdjective)) {
+      modifiers=adjectiveGroup();
+      return display();
+    }
+    if(!hasNominal) return hasFrontWord?display():null;
+    modifiers=adjectiveGroup();
+    let titleHeadResolved=true,headSenses=senses[nominalHead];
+    if(nominalCompound) {
+      if(present(6)) {
+        lastSelection=typedCompose(senses[4],senses[5],'TitleHead11');
+        head=lastSelection?lastSelection.text:source(4)+'-'+source(5);
+      } else head=compound(4,5);
+      titleHeadResolved=!!lastSelection;
+      if(lastSelection) {
+        const nativeHead=lastSelection.reversed?lastSelection.leftSense:lastSelection.rightSense;
+        headSenses=headSenses.filter(s=>s.sense===nativeHead);
+      }
+    }
+    if(present(6)) {
+      const selected=typedCompose(senses[6],headSenses,'Title22z');
+      if(selected&&titleHeadResolved) {
+        if(!nominalCompound) head=selected.rightWord;
+        title={complement:selected.leftWord,head};
+      } else {
+        if(!nominalCompound) head=source(5);
+        unresolvedTitle='the '+head+' of '+source(6);
+      }
+    } else if(!nominalCompound&&site&&!hasAdjective) head=meanings[nominalHead]||source(nominalHead);
+    else if(!nominalCompound) {
+      const nearest=present(3)?3:2;
+      const selected=typedCompose(senses[nearest],senses[nominalHead],'AdjectiveHeadDouble');
+      head=selected?selected.rightWord:meanings[nominalHead]||source(nominalHead);
+    }
+    return display();
+  }
+
   function formSenses(source) {
     const out=[];for(const w of formsIndex.get(key(source))||[]){const part=posPart(w.pos),gloss=senseIndex.get(w.id+'\t'+part);if(gloss&&!out.some(m=>m.id===w.id&&m.part===part))out.push({id:w.id,part,gloss,pos:w.pos});}return out;
   }
@@ -775,7 +984,8 @@
     return matches.find(w=>role==='head'?w.pos<=1:role==='adj'?w.pos===2:role==='of'?w.pos<=1||w.pos>=4:true)||null;
   }
   function governmentSuffix(context) {
-    if(context.parentHead){const number=context.parentPlural?'plural':'singular',exact=D.parentSuffixes.find(r=>r[0]===context.parentHead&&r[2]===number),any=D.parentSuffixes.find(r=>r[0]===context.parentHead&&r[2]==='*');if(exact||any)return(exact||any)[1];}
+    if(context.appendSuffix===false)return'';
+    if(context.parentHead){const number=context.parentPlural?'plural':'singular',exact=D.parentSuffixes.find(r=>r[0]===context.parentHead&&r[2]===number),any=D.parentSuffixes.find(r=>r[0]===context.parentHead&&r[2]==='*');return(exact||any)?.[1]||'属领';}
     if(!context.governance)return'治所';
     let best=null,score=-1;
     for(const row of D.independentSuffixes){
@@ -796,7 +1006,7 @@
   }
   function polityName(source,context) {
     const isGovernment=context.entityType==='sitegovernment'||context.entityType==='site government'||context.entityType==='government'||context.entityTypeId===1;
-    const isCivil=!isGovernment&&(context.entityType==='civilization'||context.entityTypeId===0);
+    const isCivil=!isGovernment&&(context.entityType==='civilization'||context.entityTypeId===0||(context.entityTypeId??-1)<0&&context.nameType===2);
     if(!isGovernment&&!isCivil)return entityName(source);
     let front='',body=String(source).trim(),the=marker(body,'the');if(the>0){front=entityName(body.slice(0,the))||body.slice(0,the);body=body.slice(the+3).trim();}else if(the===0)body=body.slice(3).trim();
     const of=marker(body,'of'),tail=of>=0?body.slice(of+2).trim():'';if(of>=0)body=body.slice(0,of).trim();
@@ -806,7 +1016,7 @@
     const table=isCivil?civil:government;let core=table.get(head.id+'\tHEAD');
     if(!core){const natural=entityName(source)||englishPhonetic(source);return isGovernment?natural+governmentSuffix(context):natural;}
     if(isCivil&&head.id==='NATION'&&head.pos===1)core='诸国';
-    if(modifiers){core=modifiers.split(/\s+/).map(s=>{const p=wordSlot(s,'adj');return p?(table.get(p.id+'\tADJ')||isGovernment&&civil.get(p.id+'\tADJ')||senseIndex.get(p.id+'\tADJ')||englishPhonetic(s)):englishPhonetic(s);}).join('')+core;}
+    if(modifiers){const parts=lexicalGroups(modifiers,s=>({source:s,slot:wordSlot(s,'adj')}));core=parts.map(({source:s,slot:p})=>p?(table.get(p.id+'\tADJ')||isGovernment&&civil.get(p.id+'\tADJ')||senseIndex.get(p.id+'\tADJ')||englishPhonetic(s)):englishPhonetic(s)).join(parts.length===2&&parts.every(p=>p.slot?.pos===2)?'与':'')+core;}
     if(tail){const p=wordSlot(tail,'of');const term=p&&(table.get(p.id+'\tOF:'+head.id)||table.get(p.id+'\tOF')||isGovernment&&civil.get(p.id+'\tOF')||senseIndex.get(p.id+'\t'+posPart(p.pos)));core=(term||englishPhonetic(tail))+core;}
     core=group(front,core);if(isGovernment)core+=governmentSuffix(context);return core;
   }
@@ -821,7 +1031,7 @@
   }
   function historyName(slots,context) {
     const isGovernment=['sitegovernment','site government','government'].includes(context.entityType)||context.entityTypeId===1;
-    const isCivil=!isGovernment&&(context.entityType==='civilization'||context.entityTypeId===0);
+    const isCivil=!isGovernment&&(context.entityType==='civilization'||context.entityTypeId===0||(context.entityTypeId??-1)<0&&context.nameType===2);
     const political=isGovernment||isCivil,glosses=Array(7).fill(''),roles=Array(7).fill(0);
     let reviewed=false;
     for(let i=0;i<7;i++){
@@ -845,8 +1055,10 @@
       compound=entityResult(a.length&&b.length?entityJoin(a,b):a.length?a:b)||compound;
     }
     let title='';if(slots[2]?.english||slots[3]?.english||slots[5]?.english){
-      if(glosses[4]&&glosses[5]&&(roles[4]&1)&&(roles[5]&2)&&(!glosses[2]||(roles[2]&4))&&(!glosses[3]||(roles[3]&4))){const adj=glosses[2]+glosses[3];title=adj+(adj&&!adj.endsWith('的')?'的':'')+glosses[4]+'之'+glosses[5];}
-      else title=glosses.slice(2,6).join('');
+      const paired=(context.kind==='entity'||context.kind==='region'||context.kind==='mountain')&&glosses[2]&&glosses[3]&&slots[2].pos===2&&slots[3].pos===2;
+      const adj=glosses[2]+(paired?'与':'')+glosses[3];
+      if(glosses[4]&&glosses[5]&&(roles[4]&1)&&(roles[5]&2)&&(!glosses[2]||(roles[2]&4))&&(!glosses[3]||(roles[3]&4))){title=adj+(adj&&!adj.endsWith('的')?'的':'')+glosses[4]+'之'+glosses[5];}
+      else title=adj+glosses[4]+glosses[5];
     }
     if(glosses[6]){const owner=glosses[6]+(political?'':'之');if(title)title=owner+title;else if(compound)compound=owner+compound;else title=owner;}
     return group(compound,title)+(isGovernment?governmentSuffix(context):'');
@@ -854,7 +1066,7 @@
   function reconstructName(slots) {
     let front=(slots[0]?.english||'')+(slots[1]?.english||'');
     if(slots[2]?.english||slots[3]?.english||slots[5]?.english){const title=[slots[2]?.english,slots[3]?.english,slots[4]?.english?slots[4].english+'-'+(slots[5]?.english||''):slots[5]?.english].filter(Boolean).join(' ');front+=(front?' the ':'The ')+title;}
-    if(slots[6]?.english)front+=(front?' of ':'Of ')+slots[6].english;return front;
+    if(slots[6]?.english){const openTitle=(slots[2]?.english||slots[3]?.english)&&slots[4]?.english&&!slots[5]?.english;front+=(openTitle?'of ':front?' of ':'Of ')+slots[6].english;}return front;
   }
   function term(text) {
     const s=String(text??'');if(!s)return s;const k=key(s);
@@ -868,18 +1080,18 @@
     initialize();const source=String(text??'').trim(),ctx=typeof context==='string'?{kind:context}:{...context},kind=ctx.kind||'figure';
     if(!source)return{source,text:'',method:'empty',context:ctx};
     const memo=JSON.stringify([source,ctx]);if(cache.has(memo))return cache.get(memo);
-    if(ctx.words){ctx.words=Array.from({length:7},(_,i)=>{const w=ctx.words[i]||{},pos=w.pos??w.part_of_speech??-1;return{...w,pos,english:w.english||w.english_form||D.englishForms[w.id]?.[pos]||''};});if(!ctx.words[2].english&&!ctx.words[3].english&&!ctx.words[5].english)ctx.words[4]={english:'',pos:-1};}
+    if(ctx.words){ctx.words=Array.from({length:7},(_,i)=>{const w=ctx.words[i]||{},pos=Number(w.pos??w.part_of_speech??-1);return{...w,pos,english:w.has_form===false?'':w.english||w.english_form||D.englishForms[w.id]?.[pos]||''};});if(kind!=='river'&&!ctx.words[2].id&&!ctx.words[3].id&&!ctx.words[5].id)ctx.words[4]={english:'',pos:-1};}
     let translated=null,method='preserved';
-    if(/[\u3400-\u9fff]/.test(source)){translated=source;method='chinese';}
+    if(kind==='site'||kind==='river'||kind==='entity'&&isGovernment(ctx)){
+      const named=structuredName(source,ctx,kind!=='river');translated=named.text;method=named.method;
+    }
+    else if(/[\u3400-\u9fff]/.test(source)){translated=source;method='chinese';}
     else if(kind==='figure'){translated=character(source,ctx);method='dfcn-character';}
     else if(kind==='era'){translated=eraName(source);method='dfcn-era';}
-    else if(ctx.words&&kind!=='site'){translated=historyName(ctx.words,ctx);method='dfcn-word-pos';}
-    else if(kind==='site'){
-      translated=entityName(source,ctx.words)||englishPhonetic(source,ctx.words);method='dfcn-entity';
-      if(translated&&ctx.type!==false&&ctx.appendSuffix!==false){const type=key(ctx.siteType||ctx.type||'');if(type){translated+=siteSuffixes[type]||(ctx.siteTypeId===5?'聚落':'地点');method+='-site-suffix';}}
-    }else if(kind==='entity'){translated=polityName(source,ctx)||englishPhonetic(source,ctx.words);method='dfcn-polity';}
+    else if(ctx.words){translated=historyName(ctx.words,ctx);method='dfcn-word-pos';}
+    else if(kind==='entity'){translated=polityName(source,ctx)||englishPhonetic(source,ctx.words);method='dfcn-polity';}
     else {translated=generatedName(source,ctx);method='dfcn-generated';}
-    if(!translated||translated===source){
+    if((!translated||translated===source)&&method!=='dfcn-missing-slots'&&method!=='dfcn-native-slots'){
       const native=ctx.nativeName===true||ctx.phonetic===true||nativeWords.has(key(source));
       if(native){translated=D.native[key(source)]||nativeName(source);method='dfcn-native-phonetic';}
       else{translated=translated||source;if(translated===source)method='preserved';}
